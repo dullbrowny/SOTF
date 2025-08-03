@@ -1,0 +1,108 @@
+{
+  "items": [
+    {
+      "question": "Solve for x: 2x + 3 = 11",
+      "options": [
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "answer": "4",
+      "variant_1": "Solve: 3x - 2 = 10",
+      "variant_2": "Solve: 4x + 5 = 17",
+      "rubric": "1 pt: correct manipulation; 1 pt: correct answer"
+    },
+    {
+      "question": "Solve: 5x - 7 = 18",
+      "options": [
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "answer": "5",
+      "variant_1": "Solve: 6x + 2 = 20",
+      "variant_2": "Solve: 7x - 4 = 24",
+      "rubric": "1 pt: isolate x; 1 pt: compute"
+    },
+    {
+      "question": "Find x: 3x + 9 = 0",
+      "options": [
+        "-3",
+        "0",
+        "3",
+        "-9"
+      ],
+      "answer": "-3",
+      "variant_1": "Find x: 2x + 8 = 0",
+      "variant_2": "Find x: 4x - 12 = 0",
+      "rubric": "1 pt: subtract; 1 pt: divide"
+    },
+    {
+      "question": "Solve: 4x + 5 = 21",
+      "options": [
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "answer": "4",
+      "variant_1": "Solve: 2x + 7 = 17",
+      "variant_2": "Solve: 6x - 3 = 15",
+      "rubric": "1 pt: inverse operations; 1 pt: solution"
+    },
+    {
+      "question": "Solve for x: x/2 + 6 = 10",
+      "options": [
+        "6",
+        "8",
+        "4",
+        "2"
+      ],
+      "answer": "8",
+      "variant_1": "Solve: x/3 + 2 = 7",
+      "variant_2": "Solve: x/4 + 1 = 5",
+      "rubric": "1 pt: subtract; 1 pt: multiply"
+    },
+    {
+      "question": "Solve: 7x - 2 = 26",
+      "options": [
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "answer": "4",
+      "variant_1": "Solve: 9x + 1 = 28",
+      "variant_2": "Solve: 8x - 4 = 20",
+      "rubric": "1 pt: add; 1 pt: divide"
+    },
+    {
+      "question": "Find x: 2(x + 3) = 16",
+      "options": [
+        "5",
+        "6",
+        "7",
+        "4"
+      ],
+      "answer": "5",
+      "variant_1": "Find x: 3(x - 2) = 21",
+      "variant_2": "Find x: 4(x + 1) = 24",
+      "rubric": "1 pt: distribute; 1 pt: solve"
+    },
+    {
+      "question": "Solve: x - 9 = -1",
+      "options": [
+        "-10",
+        "8",
+        "-8",
+        "10"
+      ],
+      "answer": "8",
+      "variant_1": "Solve: x - 7 = 2",
+      "variant_2": "Solve: x - 5 = 3",
+      "rubric": "1 pt: add; 1 pt: compute"
+    }
+  ]
+}

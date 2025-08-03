@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "question": "Identify the state of matter with a definite volume but no fixed shape.",
+      "options": [
+        "Solid",
+        "Liquid",
+        "Gas",
+        "Plasma"
+      ],
+      "answer": "Liquid",
+      "variant_1": "Which state expands to fill its container?",
+      "variant_2": "Which state has tightly packed particles?",
+      "rubric": "1 pt: correct concept; 1 pt: explanation"
+    }
+  ]
+}

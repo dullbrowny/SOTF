@@ -1,0 +1,10 @@
+{
+  "batchId": "grade-2025-08-03",
+  "submissions": 28,
+  "auto": 27,
+  "review": 1,
+  "essaySample": {
+    "student": "I believe x=4 because 2x+3=11\u2026",
+    "feedback": "\u2714\ufe0f Correct setup; explain last step more clearly."
+  }
+}

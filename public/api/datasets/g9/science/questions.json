@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "question": "In the equation 2H\u2082 + O\u2082 \u2192 2H\u2082O, what law is illustrated?",
+      "options": [
+        "Law of Constant Composition",
+        "Law of Conservation of Mass",
+        "Boyle's Law",
+        "Charles's Law"
+      ],
+      "answer": "Law of Conservation of Mass",
+      "variant_1": "Balance: _H\u2082 + _O\u2082 \u2192 _H\u2082O",
+      "variant_2": "What mass of water forms from 4g H\u2082 and 32g O\u2082?",
+      "rubric": "1 pt: law identification; 1 pt: reasoning"
+    }
+  ]
+}

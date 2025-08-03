@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "question": "Which subatomic particle determines the atomic number of an element?",
+      "options": [
+        "Neutron",
+        "Electron",
+        "Proton",
+        "Positron"
+      ],
+      "answer": "Proton",
+      "variant_1": "What changes in an isotope of an element?",
+      "variant_2": "Which particle has a negative charge?",
+      "rubric": "1 pt: correct particle; 1 pt: justification"
+    }
+  ]
+}

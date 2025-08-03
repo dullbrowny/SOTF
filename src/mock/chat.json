@@ -1,0 +1,4 @@
+[
+  {"role": "Student", "content": "I don't understand 2x+3=11"},
+  {"role": "AI", "content": "Subtract 3 from both sides. What do you get?"}
+]

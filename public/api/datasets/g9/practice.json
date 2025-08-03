@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "question": "Solve for x: 2x + 3 = 11",
+      "options": [
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "answer": "4",
+      "hint": "Consider distributing or factoring where needed."
+    },
+    {
+      "question": "Solve: 5x - 7 = 18",
+      "options": [
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "answer": "5",
+      "hint": "Consider distributing or factoring where needed."
+    },
+    {
+      "question": "Find x: 3x + 9 = 0",
+      "options": [
+        "-3",
+        "0",
+        "3",
+        "-9"
+      ],
+      "answer": "-3",
+      "hint": "Consider distributing or factoring where needed."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "math": {
+    "mastery": 81,
+    "delta": 7
+  },
+  "attendance": {
+    "days": 5
+  },
+  "alerts": [
+    "Arjun didn\u2019t complete the remediation quiz this week"
+  ]
+}

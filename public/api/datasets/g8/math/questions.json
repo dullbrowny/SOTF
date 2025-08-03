@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "question": "Solve for x: 2x + 3 = 11",
+      "options": [
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "answer": "4",
+      "variant_1": "Solve: 3x - 2 = 10",
+      "variant_2": "Solve: 4x + 5 = 17",
+      "rubric": "1 pt: correct manipulation; 1 pt: correct answer"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "question": "Math \u2022 Quadratic Equations (G8): Item 1",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": "A",
+      "variant_1": "Math \u2022 Quadratic Equations (G8): Variant A",
+      "variant_2": "Math \u2022 Quadratic Equations (G8): Variant B",
+      "rubric": "1 pt: reasoning; 1 pt: answer"
+    }
+  ]
+}
