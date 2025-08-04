@@ -1,5 +1,5 @@
 // src/pages/StudentTutorChat.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import KPI from '../components/KPI.jsx';
 import { api } from '../api/mockApi.js';
@@ -29,18 +29,26 @@ export default function StudentTutorChat() {
   useEffect(() => {
     try { const m = api?.peekParentMessage?.(); if (m?.text) setParentBanner(m.text); } catch {}
   }, []);
-
   useEffect(()=>{ setTopic(PRESETS[subject][0]); },[subject]);
+
+  const push = (role, text) => setChat(p => [...p, { role, text }]);
 
   const send = () => {
     if (!input.trim()) return;
-    setChat(p => [
-      ...p,
-      { role:'you', text: input },
-      { role:'ai', text:'Let’s subtract 3 from both sides, then divide by 2. What do you get?' }
-    ]);
+    push('you', input);
     setInput('');
+    setTimeout(() => push('ai','Let’s subtract 3 from both sides, then divide by 2. What do you get?'), 250);
   };
+
+  // Adaptive helpers (simulated)
+  const eli5 = () => push('ai','Imagine a seesaw. Whatever you do on one side, you must do on the other. 2x + 3 = 11 → take 3 off both sides → 2x = 8 → split into 2 equal parts → x = 4.');
+  const socratic = () => {
+    push('ai','What could you subtract from both sides to remove the +3?');
+    setTimeout(()=>push('ai','After that, what operation would undo the “×2” on x?'), 900);
+  };
+  const showSteps = () => push('ai','Steps:\n1) 2x + 3 = 11\n2) Subtract 3 ⇒ 2x = 8\n3) Divide by 2 ⇒ x = 4');
+  const hint = () => push('ai','Hint: move constants first, then coefficients.');
+  const checkAnswer = () => push('ai','If your answer is 4, plug it back: 2·4 + 3 = 11 ✓');
 
   const goPractice = () => {
     const qs = new URLSearchParams({
@@ -64,6 +72,7 @@ export default function StudentTutorChat() {
               <button className="btn secondary" onClick={()=>setParentBanner(null)}>Dismiss</button>
             </div>
           )}
+
           <div style={{display:'flex', flexDirection:'column', gap:8, marginBottom:8}}>
             {chat.map((m,i)=>(
               <div key={i} className="bubble" style={{alignSelf: m.role==='you'?'flex-end':'flex-start'}}>
@@ -71,9 +80,19 @@ export default function StudentTutorChat() {
               </div>
             ))}
           </div>
+
           <div className="row">
             <input className="input" value={input} onChange={(e)=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter') send();}} />
             <button className="btn" onClick={send}>Send</button>
+          </div>
+
+          {/* Adaptive helpers */}
+          <div className="row" style={{marginTop:8, flexWrap:'wrap', gap:8}}>
+            <button className="btn secondary" onClick={eli5}>Explain like I’m 5</button>
+            <button className="btn secondary" onClick={socratic}>Student mode (Socratic)</button>
+            <button className="btn secondary" onClick={showSteps}>Show steps</button>
+            <button className="btn secondary" onClick={hint}>Give hint</button>
+            <button className="btn secondary" onClick={checkAnswer}>Check my answer</button>
           </div>
 
           {/* mini practice picker */}
