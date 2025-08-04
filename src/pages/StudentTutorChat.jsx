@@ -1,268 +1,223 @@
-import { useEffect, useState } from 'react';
-import { api } from '../api/mockApi.js';
+// src/pages/StudentTutorChat.jsx
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useDemoData } from '../demoData.jsx';
 
-function Bubble({ who, children }) {
-  const align = who === 'ai' ? 'flex-start' : 'flex-end';
-  return (
-    <div style={{ display: 'flex', justifyContent: align }}>
-      <div className="card" style={{ maxWidth: 560 }}>
-        <div className="badge">{who === 'ai' ? 'AI Tutor' : 'You'}</div>
-        <div>{children}</div>
-      </div>
-    </div>
-  );
-}
+const T = { card:'#0f172a', border:'#1f2937', text:'#e5e7eb', sub:'#9ca3af', header:'#0b1220', primary:'#06b6d4' };
+const card = { background:T.card, border:`1px solid ${T.border}`, borderRadius:12, padding:16, color:T.text };
+const label = { fontSize:12, color:T.sub, marginBottom:4 };
+const input = { padding:'10px 12px', border:`1px solid ${T.border}`, background:T.header, borderRadius:10, color:T.text, width:'100%' };
+const pill  = { display:'inline-block', padding:'2px 8px', borderRadius:999, background:'#0b1220', border:`1px solid ${T.border}`, color:T.text, fontSize:12 };
 
-export default function StudentTutorChat() {
-  const [script, setScript] = useState([]);
-  const [input, setInput] = useState('I don’t get how to solve 2x + 3 = 11');
-  const [typing, setTyping] = useState(false);
+const SUBJECTS=['Math','Science','Biology'];
+const GRADES=['6','7','8','9','10'];
+const TOPICS={
+  Math:['Linear Equations','Integers — operations','Fractions — add, subtract, compare'],
+  Science:['Physics — speed problems','Physics — acceleration','Chemistry — density'],
+  Biology:['Punnett squares — monohybrid']
+};
+const DIFFS=['easy','medium','hard'];
 
-  // modes + comfort
-  const [mode, setMode] = useState('Standard'); // Standard | ELI5 | Socratic | Steps
-  const [level, setLevel] = useState(null);     // 'low' | 'med' | 'high'
-  const [awaiting, setAwaiting] = useState(false); // Socratic wait flag
+function botBubble(children){return(
+  <div style={{ alignSelf:'flex-start', maxWidth:680 }}>
+    <div style={{ fontSize:11, color:T.sub, margin:'0 0 4px 4px' }}>AI Tutor</div>
+    <div style={{ background:'#0b1220', border:`1px solid ${T.border}`, borderRadius:14, padding:'10px 12px' }}>{children}</div>
+  </div>
+);}
+function youBubble(children){return(
+  <div style={{ alignSelf:'flex-end', maxWidth:680 }}>
+    <div style={{ fontSize:11, color:T.sub, textAlign:'right', margin:'0 4px 4px 0' }}>You</div>
+    <div style={{ background:'#0b1220', border:`1px solid ${T.border}`, borderRadius:14, padding:'10px 12px' }}>{children}</div>
+  </div>
+);}
 
-  // practice handoff
-  const [subj, setSubj] = useState('Math');
-  const [grade, setGrade] = useState('8');
-  const [topic, setTopic] = useState('Linear Equations');
-  const [pcount, setPcount] = useState(5);
-  const [pdiff, setPdiff] = useState('easy');
+export default function StudentTutorChat(){
+  const nav = useNavigate();
+  const { grade, setGrade } = useDemoData();
 
-  useEffect(() => {
-    api.getTutorScript?.().then((s) => setScript(s || [
-      { who: 'ai', text: 'Hi! What are you stuck on in Linear Equations today?' },
-    ]));
-  }, []);
+  // Chat state
+  const [messages,setMessages] = useState([
+    { role:'system', text:'Topic: Linear Equations • Source: NCERT G8' }
+  ]);
+  const [mode,setMode] = useState('standard'); // standard | eli5 | socratic | steps
+  const [comfort,setComfort] = useState(null); // null until asked once in socratic
+  const [inputText,setInputText] = useState("I don’t get how to solve 2x + 3 = 11");
 
-  const push = (who, text) => setScript((s) => [...s, { who, text }]);
+  // Practice generator controls
+  const [subject,setSubject]=useState('Math');
+  const [topic,setTopic]=useState('Linear Equations');
+  const [difficulty,setDifficulty]=useState('easy');
+  const [count,setCount]=useState(5);
 
-  const eli5 = () => {
-    push('ai', 'Think of 2x + 3 = 11 like a balance. Remove 3 from both sides → 2x = 8. Now split 8 into 2 equal groups → x = 4.');
-  };
-  const showSteps = () => {
-    push('ai', '1) Subtract 3: 2x + 3 − 3 = 11 − 3 → 2x = 8');
-    push('ai', '2) Divide by 2: 2x / 2 = 8 / 2 → x = 4');
-    push('ai', 'Check: 2·4 + 3 = 11 ✓');
-  };
+  const canAskComfort = useMemo(()=> mode==='socratic' && comfort==null, [mode,comfort]);
 
-  const send = async () => {
-    if (!input.trim()) return;
-    push('you', input);
-    const userMsg = input;
-    setInput('');
+  useEffect(()=>{
+    // Show header change
+    setMessages(m=>[m[0], ...m.slice(1)]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
 
-    // comfort gate the first time
-    if (!level) {
-      setTyping(true);
-      await new Promise((r) => setTimeout(r, 300));
-      push('ai', 'Before we dive in—how comfortable are you with this topic?');
-      push('ai', 'Choose one below: Not at all / A bit / Mostly / I’ve got it');
-      setTyping(false);
+  const addBot = (text)=> setMessages(m=>[...m,{role:'bot',text}]);
+  const addYou = (text)=> setMessages(m=>[...m,{role:'you',text}]);
+
+  function respondStandard(q){
+    addBot(`Try isolating **x**.\n\n1) Subtract 3 from both sides.\n2) Divide by 2.\n\nWhat do you get?`);
+  }
+  function respondELI5(q){
+    addBot(`Think of \`2x + 3 = 11\` like a box doubled, then +3 gives 11. Take away 3 first → 8. Now split 8 into two equal parts → 4. So \`x = 4\`. Want another example?`);
+  }
+  function respondSteps(q){
+    addBot(`**Step 1:** Subtract 3 from both sides.\n**Step 2:** Divide by 2.\n**Step 3:** State the value of x.\n\nType your result, I’ll check it.`);
+  }
+  function respondSocratic(q){
+    if (comfort==null) {
+      addBot(`Before we dive in—how comfortable are you with this topic?\n\nChoose one below: Not at all / A bit / Mostly / I've got it`);
       return;
     }
+    // Socratic probing chain
+    const chain = [
+      'What could you subtract from both sides to remove the +3?',
+      'After that, what operation would undo the “×2” on x?',
+      'Do the arithmetic and tell me the value of x.'
+    ];
+    // Append next question based on last bot
+    const botQs = messages.filter(m=>m.role==='bot').map(m=>m.text);
+    const already = botQs.filter(t=>chain.includes(t)).length;
+    const nextQ = chain[already] ?? 'Great — what did you get for x?';
+    addBot(nextQ);
+  }
 
-    if (mode === 'ELI5') {
-      setTyping(true);
-      await new Promise((r) => setTimeout(r, 250));
-      eli5();
-      setTyping(false);
-      return;
-    }
-    if (mode === 'Steps') {
-      setTyping(true);
-      await new Promise((r) => setTimeout(r, 250));
-      showSteps();
-      setTyping(false);
-      return;
-    }
-    if (mode === 'Socratic') {
-      if (!awaiting) {
-        setAwaiting(true);
-        setTyping(true);
-        await new Promise((r) => setTimeout(r, 250));
-        push('ai', 'What could you subtract from both sides to remove the +3?');
-        setTyping(false);
-      } else {
-        // user replied → next probe, tailored roughly by response length
-        const short = userMsg.length < 5;
-        setAwaiting(false);
-        setTyping(true);
-        await new Promise((r) => setTimeout(r, 250));
-        push('ai', short
-          ? 'Good—try subtracting 3 first. After that, what remains on the left?'
-          : 'Great. After subtracting 3, what operation undoes ×2 on x?');
-        setTyping(false);
-        setAwaiting(true);
+  const onSend = ()=>{
+    const text = inputText.trim();
+    if(!text) return;
+    addYou(text);
+    setInputText('');
+    if (mode==='socratic' && comfort==null) {
+      // interpret first user reply as comfort choice
+      const norm = text.toLowerCase();
+      if (['not at all','a bit','mostly',"i've got it","ive got it"].some(s=>norm.includes(s))){
+        setComfort(norm.startsWith('not')?'low': norm.startsWith('a bit')?'midlow': norm.startsWith('mostly')?'midhigh':'high');
+        addBot(`Got it — ${norm.includes('mostly')?'mostly':norm}. I’ll adjust my explanations.`);
+        return;
       }
-      return;
     }
-
-    // Standard
-    setTyping(true);
-    await new Promise((r) => setTimeout(r, 250));
-    push('ai', 'Let’s subtract 3 from both sides, then divide by 2. What do you get?');
-    setTyping(false);
+    switch(mode){
+      case 'eli5':     respondELI5(text); break;
+      case 'steps':    respondSteps(text); break;
+      case 'socratic': respondSocratic(text); break;
+      default:         respondStandard(text); break;
+    }
   };
 
-  const sendPractice = () => {
-    // Navigate to Practice with query params (no router dependency)
+  const onMakePractice = ()=>{
     const params = new URLSearchParams({
-      from: 'tutor',
-      subject: subj,
-      grade,
-      topic,
-      difficulty: pdiff,
-      count: String(pcount),
+      from:'tutor',
+      subject, topic,
+      grade:String(grade),
+      difficulty, count:String(count)
     }).toString();
-    window.location.href = `/practice?${params}`;
+    nav(`/practice?${params}`);
   };
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: '2fr 1fr' }}>
-      <div className="grid">
-        <div className="card">
-          <h2>AI Tutor</h2>
-          <div className="badge">Topic: {topic} • Source: NCERT G{grade}</div>
-        </div>
-
-        <div className="grid">
-          {script.map((m, i) => (
-            <Bubble who={m.who} key={i}>
-              {m.text}
-            </Bubble>
-          ))}
-          {typing && <Bubble who="ai">Typing…</Bubble>}
-        </div>
-
-        {/* input + actions */}
-        <div className="card">
-          <div className="row" style={{ gap: 8 }}>
-            <input
-              className="input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question…"
-              onKeyDown={(e) => e.key === 'Enter' && send()}
-            />
-            <button className="btn" onClick={send}>Send</button>
+    <div style={{ padding:20, color:T.text }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 340px', gap:16 }}>
+        {/* Chat column */}
+        <div style={card}>
+          <div style={{ fontSize:20, fontWeight:800, marginBottom:12 }}>AI Tutor</div>
+          <div style={{ marginBottom:10 }}>
+            <span style={pill}>Topic: {topic}</span>{' '}
+            <span style={pill}>Source: NCERT G{grade}</span>
           </div>
 
-          {/* mode selector */}
-          <div className="row" style={{ marginTop: 8, gap: 8, flexWrap: 'wrap' }}>
-            <span className="badge">Mode</span>
-            {['Standard', 'ELI5', 'Socratic', 'Steps'].map((m) => (
-              <button
-                key={m}
-                className={`btn ${mode === m ? 'primary' : 'secondary'}`}
-                onClick={() => setMode(m)}
-              >
-                {m}
-              </button>
-            ))}
+          {/* Transcript */}
+          <div style={{ display:'flex', flexDirection:'column', gap:12, minHeight:220 }}>
+            {messages.slice(1).map((m,i)=>
+              m.role==='bot' ? <div key={i}>{botBubble(<div dangerouslySetInnerHTML={{__html: m.text.replace(/\n/g,'<br/>')}} />)}</div>
+                              : <div key={i}>{youBubble(m.text)}</div>
+            )}
           </div>
 
-          {/* comfort quick-taps (only until chosen) */}
-          {!level && (
-            <div className="row" style={{ marginTop: 8, gap: 8, flexWrap: 'wrap' }}>
-              <span className="badge">Comfort</span>
-              {[
-                { k: 'low', label: 'Not at all' },
-                { k: 'med', label: 'A bit' },
-                { k: 'high', label: 'Mostly' },
-                { k: 'high', label: 'I’ve got it' },
-              ].map((o) => (
-                <button
-                  key={o.label}
-                  className="btn secondary"
-                  onClick={() => {
-                    setLevel(o.k);
-                    push('ai', `Got it — ${o.label.toLowerCase()}. I’ll adjust my explanations.`);
-                  }}
-                >
-                  {o.label}
+          {/* Composer */}
+          <div style={{ marginTop:12 }}>
+            <input style={input} placeholder="Ask a question…" value={inputText} onChange={e=>setInputText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter') onSend();}} />
+            <div style={{ display:'flex', gap:8, marginTop:10, alignItems:'center', flexWrap:'wrap' }}>
+              <span style={{ fontSize:12, color:T.sub }}>Mode</span>
+              {['standard','eli5','socratic','steps'].map(m=>(
+                <button key={m} onClick={()=>{setMode(m); if(m!=='socratic') setComfort(null);}}
+                  style={{ padding:'6px 10px', borderRadius:999, border:`1px solid ${T.border}`,
+                           background: mode===m ? T.primary : '#0b1220', color: mode===m ? '#001b1f' : T.text }}>
+                  {m==='eli5'?'ELI5': m[0].toUpperCase()+m.slice(1)}
                 </button>
               ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right column: quick practice handoff */}
-      <div className="grid">
-        <div className="card">
-          <div className="kpi">
-            <div className="label">Completion without human help</div>
-            <div className="value">82%</div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="kpi">
-            <div className="label">Recommended next</div>
-            <div className="value">2-step equations (easy)</div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-            <div>
-              <div className="label">Subject</div>
-              <select className="input" value={subj} onChange={(e) => setSubj(e.target.value)}>
-                {['Math', 'Science'].map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <div className="label">Grade</div>
-              <select className="input" value={grade} onChange={(e) => setGrade(e.target.value)}>
-                {['6', '7', '8', '9', '10'].map((g) => (
-                  <option key={g} value={g}>
-                    G{g}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div style={{ minWidth: 200, flex: '1 1 220px' }}>
-              <div className="label">Topic</div>
-              <select className="input" value={topic} onChange={(e) => setTopic(e.target.value)}>
-                {['Linear Equations', 'Fractions', 'Integers', 'Physics — acceleration'].map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <div className="label">Difficulty</div>
-              <select className="input" value={pdiff} onChange={(e) => setPdiff(e.target.value)}>
-                {['easy', 'medium', 'hard'].map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <div className="label">Count</div>
-              <input
-                className="input"
-                type="number"
-                min={1}
-                max={20}
-                value={pcount}
-                onChange={(e) => setPcount(e.target.value)}
-                style={{ width: 80 }}
-              />
+              {mode==='socratic' && (
+                <>
+                  <span style={{ marginLeft:8, fontSize:12, color:T.sub }}>Comfort</span>
+                  {['Not at all','A bit','Mostly',"I've got it"].map(c=>(
+                    <button key={c} onClick={()=>setComfort(c.toLowerCase())}
+                      style={{ padding:'6px 10px', borderRadius:999, border:`1px solid ${T.border}`,
+                               background: comfort===c.toLowerCase()?T.primary:'#0b1220', color: comfort===c.toLowerCase()?'#001b1f':T.text }}>
+                      {c}
+                    </button>
+                  ))}
+                </>
+              )}
+              <div style={{ flex:1 }} />
+              <button onClick={onSend}
+                style={{ padding:'10px 14px', borderRadius:10, border:`1px solid ${T.border}`, background:T.primary, color:'#001b1f', fontWeight:700 }}>
+                Send
+              </button>
             </div>
           </div>
+        </div>
 
-          <div className="row" style={{ marginTop: 10 }}>
-            <button className="btn" onClick={sendPractice}>Make a practice set</button>
+        {/* Side panel */}
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <div style={card}>
+            <div style={label}>Completion without human help</div>
+            <div style={{ fontSize:28, fontWeight:800 }}>82%</div>
+          </div>
+          <div style={card}>
+            <div style={label}>Recommended next</div>
+            <div style={{ fontSize:22, fontWeight:800 }}>2-step equations (easy)</div>
+          </div>
+          <div style={card}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div>
+                <div style={label}>Subject</div>
+                <select style={input} value={subject} onChange={e=>{setSubject(e.target.value); setTopic(TOPICS[e.target.value][0]);}}>
+                  {SUBJECTS.map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={label}>Grade</div>
+                <select style={input} value={String(grade)} onChange={e=>setGrade(String(e.target.value))}>
+                  {GRADES.map(g=><option key={g} value={g}>G{g}</option>)}
+                </select>
+              </div>
+              <div style={{ gridColumn:'span 2' }}>
+                <div style={label}>Topic</div>
+                <select style={input} value={topic} onChange={e=>setTopic(e.target.value)}>
+                  {(TOPICS[subject]||[]).map(t=><option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={label}>Difficulty</div>
+                <select style={input} value={difficulty} onChange={e=>setDifficulty(e.target.value)}>
+                  {DIFFS.map(d=><option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={label}>Count</div>
+                <input style={input} type="number" min={1} max={20} value={count} onChange={e=>setCount(Number(e.target.value||5))} />
+              </div>
+            </div>
+            <div style={{ marginTop:12 }}>
+              <button onClick={onMakePractice}
+                style={{ padding:'10px 14px', borderRadius:10, border:`1px solid ${T.border}`, background:T.primary, color:'#001b1f', fontWeight:700 }}>
+                Make a practice set
+              </button>
+            </div>
           </div>
         </div>
       </div>
