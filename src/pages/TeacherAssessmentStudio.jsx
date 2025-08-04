@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { generateAssessmentItems, api } from '../api/mockApi.js';
+import { useDemoData } from '../demoData.jsx'; // adjust if your path differs
 
 /* toast */
 function useToast() {
@@ -60,28 +61,59 @@ const T = {
 const subtleLabel = { fontSize: 12, color: T.subtext, marginBottom: 4 };
 const inputStyle = { padding: '8px 10px', border: `1px solid ${T.cardBorder}`, background: T.header, borderRadius: 8, width: '100%', fontSize: 14, color: T.text };
 const selectStyle = { ...inputStyle, width: 220 };
+const smallSelect = { ...inputStyle, width: 140 };
 const buttonStyle = (primary=false)=>({ padding:'10px 14px', borderRadius:8, fontSize:14, border: primary?`1px solid ${T.primary}`:`1px solid ${T.cardBorder}`, background: primary?T.primary:T.header, color: primary?'white':T.text, cursor:'pointer' });
 const cardStyle = { background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: 16, color: T.text };
 const calloutWrap = { background:'linear-gradient(180deg, rgba(37,99,235,0.18), rgba(37,99,235,0.08))', border:'1px solid rgba(99,102,241,0.35)', color:'#c7d2fe', borderRadius:12, padding:12, fontWeight:600 };
 const chip = { display:'inline-block', padding:'2px 8px', borderRadius:999, background:T.chipBg, border:`1px solid ${T.chipBorder}`, fontSize:12, color:T.text };
 const copyAffordanceClass = 'copy-affordance';
 
-const SEED_PRESETS = [
-  'Fractions — add, subtract, compare',
-  'Decimals — place value, rounding',
-  'Integers — operations',
-  'Geometry — area & perimeter',
-  'Algebra — simple equations',
-];
+/* subject/grade presets */
+const SUBJECTS = ['Math', 'Science'];
+const GRADES = ['6','7','8','9','10'];
+
+const PRESETS = {
+  Math: {
+    '6': ['Fractions — add, subtract, compare', 'Decimals — place value', 'Integers — basics', 'Geometry — rectangles'],
+    '7': ['Fractions — add, subtract, compare', 'Decimals — rounding', 'Integers — operations', 'Geometry — area & perimeter', 'Algebra — simple equations'],
+    '8': ['Fractions — add, subtract, compare', 'Decimals — mixed precision', 'Integers — operations', 'Geometry — area & perimeter', 'Algebra — simple equations'],
+    '9': ['Integers — operations', 'Geometry — area & perimeter', 'Algebra — simple equations', 'Decimals — mixed precision'],
+    '10': ['Algebra — simple equations', 'Geometry — area & perimeter', 'Integers — operations'],
+  },
+  Science: {
+    '6': ['Physics — speed problems', 'Chemistry — density'],
+    '7': ['Physics — speed problems', 'Chemistry — density'],
+    '8': ['Physics — speed problems', 'Chemistry — density'],
+    '9': ['Physics — speed problems', 'Chemistry — density'],
+    '10': ['Physics — speed problems', 'Chemistry — density'],
+  },
+};
+
+const deepCopy = (x) => JSON.parse(JSON.stringify(x));
 
 export default function TeacherAssessmentStudio() {
   const { show, ToastHost } = useToast();
+  const { grade, setGrade } = useDemoData(); // global Grade from header
 
-  const [seed, setSeed] = useState(SEED_PRESETS[0]);
+  const [subject, setSubject] = useState('Math');
+  const [seed, setSeed] = useState(() => PRESETS['Math'][String(grade) || '7']?.[0] ?? 'Fractions — add, subtract, compare');
   const [count, setCount] = useState(8);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
+
+  const presetsForSG = useMemo(() => deepCopy(PRESETS[subject]?.[String(grade)] ?? []), [subject, grade]);
+
+  useEffect(() => {
+    if (!presetsForSG.length) return;
+    const s = String(seed).toLowerCase();
+    const hints = subject === 'Science'
+      ? ['phys','speed','velocity','distance','density','chem']
+      : ['fraction','decimal','integer','geometry','algebra'];
+    const hit = hints.some(h => s.includes(h));
+    if (!hit) setSeed(presetsForSG[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subject, grade]);
 
   const varietyScore = useMemo(() => {
     if (!rows?.length) return 0;
@@ -100,10 +132,11 @@ export default function TeacherAssessmentStudio() {
     const start = performance.now();
     try {
       const n = Number(count);
+      const payload = { seed, count: n, subject, grade: String(grade) };
       const attempts = [
-        () => generateAssessmentItems?.({ seed, count: n }),
+        () => generateAssessmentItems?.(payload),
         () => generateAssessmentItems?.(seed, n),
-        () => api?.generateAssessmentItems?.({ seed, count: n }),
+        () => api?.generateAssessmentItems?.(payload),
         () => api?.generateAssessmentItems?.(seed, n),
       ];
       let data, items = [];
@@ -113,11 +146,11 @@ export default function TeacherAssessmentStudio() {
           data = await call();
           items = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
           if (items.length) break;
-        } catch { /* try next */ }
+        } catch {}
       }
       if (!items.length) {
-        console.warn('generateAssessmentItems returned unexpected shape:', data);
-        show('No items returned. Check mockApi shape (see console).');
+        console.warn('generateAssessmentItems: unexpected shape', data);
+        show('No items returned. Check mockApi (see console).');
       }
       setRows(items || []);
       setElapsedMs(performance.now() - start);
@@ -131,7 +164,7 @@ export default function TeacherAssessmentStudio() {
 
   const handleExport = () => {
     if (!rows?.length) return show('Nothing to export yet.');
-    downloadCSV('assessment_items.csv', rows);
+    downloadCSV(`assessment_${subject}_G${grade}.csv`, rows);
     show('Exported CSV.');
   };
 
@@ -158,9 +191,24 @@ export default function TeacherAssessmentStudio() {
     <div style={{ padding: 20, background: T.bg, minHeight: '100vh', color: T.text }}>
       <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 6 }}>Assessment • v2</div>
 
-      {/* Controls row */}
+      {/* Controls */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <div style={{ minWidth: 280, flex: '1 1 420px' }}>
+        <div>
+          <div style={subtleLabel}>Subject</div>
+          <select style={smallSelect} value={subject} onChange={(e)=>{ setSubject(e.target.value); }}>
+            {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <div style={subtleLabel}>Grade</div>
+          {/* Bound to global grade from header */}
+          <select style={smallSelect} value={String(grade)} onChange={(e)=> setGrade(String(e.target.value))}>
+            {GRADES.map(g => <option key={g} value={g}>G{g}</option>)}
+          </select>
+        </div>
+
+        <div style={{ minWidth: 280, flex: '1 1 360px' }}>
           <div style={subtleLabel}>Seed</div>
           <input style={inputStyle} type="text" value={seed} onChange={(e) => setSeed(e.target.value)} />
         </div>
@@ -172,11 +220,11 @@ export default function TeacherAssessmentStudio() {
             if (v !== '__custom__') setSeed(v);
           }}>
             <option value="__custom__">— choose preset —</option>
-            {SEED_PRESETS.map((p) => (<option key={p} value={p}>{p}</option>))}
+            {(presetsForSG).map((p) => (<option key={p} value={p}>{p}</option>))}
           </select>
         </div>
 
-        <div style={{ width: 140 }}>
+        <div style={{ width: 120 }}>
           <div style={subtleLabel}>Count</div>
           <input style={inputStyle} type="number" min={1} max={100} value={count} onChange={(e) => setCount(e.target.value)} />
         </div>
@@ -265,7 +313,7 @@ export default function TeacherAssessmentStudio() {
 
           {!rows?.length && (
             <div style={{ padding: 12, color: T.subtext, fontSize: 14 }}>
-              Tip: enter a seed and click <b>Generate</b> to create assessment items.
+              Tip: pick Subject & Grade, choose/edit a Seed, then click <b>Generate</b>.
             </div>
           )}
         </div>
@@ -287,9 +335,10 @@ export default function TeacherAssessmentStudio() {
           <div style={cardStyle}>
             <div style={{ fontSize: 12, color: T.subtext, marginBottom: 6 }}>Session</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <span style={chip}>Subject: {subject}</span>
+              <span style={chip}>Grade: {String(grade)}</span>
               <span style={chip}>Items: {rows?.length ?? 0}</span>
               <span style={chip}>Elapsed: {(elapsedMs / 1000).toFixed(2)}s</span>
-              <span style={chip}>Seed length: {seed.length}</span>
             </div>
           </div>
         </div>
