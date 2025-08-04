@@ -12,14 +12,28 @@ import ParentDigest from "./pages/ParentDigest.jsx";
 import DemoScript from "./components/DemoScript.jsx";
 
 function DatasetSwitcher() {
-  const { dataset, setDataset } = useDemoData();
+  const { dataset, setDataset, setGrade } = useDemoData();
+
+  const onChange = (e) => {
+    const v = e.target.value;            // e.g., "g7"
+    // Update dataset if setter exists
+    if (typeof setDataset === "function") setDataset(v);
+    else console.warn('setDataset is not available; ignoring "Demo data" change');
+
+    // Also update global grade so pages react immediately
+    const gMatch = (v || "").match(/\d+/); // "7" from "g7"
+    if (gMatch && typeof setGrade === "function") setGrade(gMatch[0]);
+  };
+
   return (
     <div className="row">
       <span className="badge">Demo data</span>
-      <select value={dataset} onChange={(e) => setDataset(e.target.value)}>
+      <select value={dataset} onChange={onChange}>
+        <option value="g6">Grade 6</option>
         <option value="g7">Grade 7</option>
         <option value="g8">Grade 8</option>
         <option value="g9">Grade 9</option>
+        <option value="g10">Grade 10</option>
       </select>
     </div>
   );
@@ -53,16 +67,21 @@ function RoleSwitcher() {
 }
 
 export default function App() {
-  const { setDataset } = useDemoData();
+  const { setDataset, setGrade } = useDemoData();
   const loc = useLocation();
   const nav = useNavigate();
 
   // Deep-link support: ?dataset=g7&route=/admin
   useEffect(() => {
     const p = new URLSearchParams(loc.search);
-    const ds = p.get("dataset");
+    const ds = p.get("dataset"); // e.g., "g7"
     const route = p.get("route");
-    if (ds) setDataset(ds);
+
+    if (ds) {
+      if (typeof setDataset === "function") setDataset(ds);
+      const gMatch = ds.match(/\d+/);
+      if (gMatch && typeof setGrade === "function") setGrade(gMatch[0]);
+    }
     if (route) nav(route, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -104,3 +123,4 @@ export default function App() {
     </div>
   );
 }
+
