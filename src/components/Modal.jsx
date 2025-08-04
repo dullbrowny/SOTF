@@ -1,19 +1,17 @@
-export default function Modal({ open, title, children, onClose, actions }) {
+// src/components/Modal.jsx
+import React from 'react';
+
+export default function Modal({ open, title, children, actions, onClose }) {
   if (!open) return null;
   return (
-    <div style={{
-      position:'fixed', inset:0, background:'rgba(0,0,0,0.4)',
-      display:'flex', alignItems:'center', justifyContent:'center', zIndex: 9999
-    }}
-      onClick={onClose}
-    >
-      <div className="card" style={{minWidth: 420, maxWidth: 640}} onClick={(e)=>e.stopPropagation()}>
-        <h3 style={{marginTop:0}}>{title}</h3>
-        <div>{children}</div>
-        <div className="row" style={{justifyContent:'flex-end', gap:8, marginTop:12}}>
-          {actions}
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={(e)=>e.stopPropagation()}>
+        <div className="row" style={{justifyContent:'space-between'}}>
+          <h3 style={{margin:0}}>{title}</h3>
           <button className="btn secondary" onClick={onClose}>Close</button>
         </div>
+        <div style={{marginTop:12}}>{children}</div>
+        {actions && <div style={{marginTop:12, display:'flex', gap:8, justifyContent:'flex-end'}}>{actions}</div>}
       </div>
     </div>
   );

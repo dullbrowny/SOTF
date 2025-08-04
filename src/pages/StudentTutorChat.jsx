@@ -1,90 +1,62 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { api } from '../api/mockApi.js'
-import QuickChips from '../components/QuickChips.jsx'
-import VariantPicker from '../components/VariantPicker.jsx'
-import { useDemoData } from '../demoData.jsx'
-
-function Bubble({ who, children }) {
-  const align = who === 'ai' ? 'flex-start' : 'flex-end'
-  return (
-    <div style={{display:'flex', justifyContent: align}}>
-      <div className="card" style={{maxWidth: 560}}>
-        <div className="badge">{who === 'ai' ? 'AI Tutor' : 'You'}</div>
-        <div>{children}</div>
-      </div>
-    </div>
-  )
-}
+// src/pages/StudentTutorChat.jsx
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import KPI from '../components/KPI.jsx';
+import { api } from '../api/mockApi';
 
 export default function StudentTutorChat() {
-  const { dataset } = useDemoData()
-  const nav = useNavigate()
-  const [script, setScript] = useState([])
-  const [input, setInput] = useState('I don’t get how to solve 2x + 3 = 11')
-  const [typing, setTyping] = useState(false)
-  const [picker, setPicker] = useState(false)
-
-  useEffect(() => { api.getTutorScript().then(setScript) }, [dataset])
+  const nav = useNavigate();
+  const [chat, setChat] = useState([{ role:'ai', text:'Hi! What are you stuck on in Linear Equations today?' }]);
+  const [input, setInput] = useState('I don’t get how to solve 2x + 3 = 11');
+  const [parentBanner, setParentBanner] = useState(null);
 
   useEffect(() => {
-    const onFocus = () => {
-      const msgs = JSON.parse(localStorage.getItem('parent_msgs') || '[]')
-      if (msgs.length) setScript(s => [...s, {who:'ai', text:`Message from Parent: “${msgs[msgs.length-1]}”` }])
-    }
-    window.addEventListener('focus', onFocus)
-    onFocus()
-    return () => window.removeEventListener('focus', onFocus)
-  }, [])
+    const msg = api.peekParentMessage();
+    if (msg?.text) setParentBanner(msg.text);
+  }, []);
 
-  const send = async (text) => {
-    const message = text ?? input
-    if (!message) return
-    setScript(s => [...s, { who: 'user', text: message }])
-    setInput('')
-    setTyping(true)
-    await new Promise(r=>setTimeout(r, 800))
-    const ai = { who:'ai', text:'Try this: subtract 3 from both sides, then divide by 2. What is x now?' }
-    setScript(s => [...s, ai])
-    setTyping(false)
-  }
+  const send = () => {
+    if (!input.trim()) return;
+    setChat(p => [...p, { role:'you', text: input }, { role:'ai', text:'Let’s subtract 3 from both sides, then divide by 2. What do you get?' }]);
+    setInput('');
+  };
 
-  const confirmPractice = (opts) => {
-    setPicker(false)
-    const q = new URLSearchParams({ topic: opts.topic, subject: opts.subject, difficulty: opts.difficulty, count: String(opts.count), distractors: opts.distractors, from: 'tutor' }).toString()
-    nav('/practice?' + q)
-  }
+  const openPracticeSet = () => {
+    const params = new URLSearchParams({
+      subject: 'Math', topic: 'Linear Equations', difficulty: 'easy', count: '5', distractors: 'numeric', from: 'tutor'
+    });
+    nav(`/practice?${params.toString()}`);
+  };
 
   return (
-    <div className="grid" style={{gridTemplateColumns:'2fr 1fr'}}>
-      <div className="grid">
-        <div className="card">
+    <div className="page">
+      <div className="grid two">
+        <section className="card">
           <h2>AI Tutor</h2>
-          <div className="row" style={{gap:8}}>
-            <div className="badge">Dataset: {dataset.toUpperCase()}</div>
-            <div className="badge">Topic: Linear Equations • Confidence: High • Source: NCERT</div>
+          {parentBanner && (
+            <div className="banner info">Message from Parent: {parentBanner} <button className="btn secondary" onClick={()=>setParentBanner(null)}>Dismiss</button></div>
+          )}
+          <div style={{display:'flex', flexDirection:'column', gap:8, marginBottom:8}}>
+            {chat.map((m,i)=>(<div key={i} className="bubble" style={{alignSelf: m.role==='you'?'flex-end':'flex-start'}}>
+              <span className="badge" style={{marginRight:6}}>{m.role==='ai'?'AI Tutor':'You'}</span>{m.text}
+            </div>))}
           </div>
-        </div>
-        <div className="grid">
-          {script.map((m, i) => <Bubble who={m.who} key={i}>{m.text}</Bubble>)}
-          {typing && <Bubble who="ai">Typing…</Bubble>}
-        </div>
-        <div className="card row" style={{gap:8, alignItems:'center'}}>
-          <input className="input" value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask a question…" />
-          <button className="btn" onClick={()=>send()}>Send</button>
-        </div>
-        <div className="card">
-          <QuickChips
-            items={['Hint','Explain like I’m 10','Another example','Make a practice set']}
-            onPick={(t)=> t==='Make a practice set' ? setPicker(true) : send(t)}
-          />
-        </div>
+          <div className="row">
+            <input className="input" value={input} onChange={(e)=>setInput(e.target.value)} />
+            <button className="btn" onClick={send}>Send</button>
+          </div>
+          <div className="row" style={{marginTop:8}}>
+            <button className="btn secondary" onClick={()=>setChat(p=>[...p,{role:'ai', text:'Hint: try isolating x.'}])}>Hint</button>
+            <button className="btn secondary" onClick={()=>setChat(p=>[...p,{role:'ai', text:'Imagine a balance scale: do the same to both sides.'}])}>Explain like I’m 10</button>
+            <button className="btn secondary" onClick={()=>setChat(p=>[...p,{role:'ai', text:'Another example: 3x + 5 = 17 → x = 4.'}])}>Another example</button>
+            <button className="btn secondary" onClick={openPracticeSet}>Make a practice set</button>
+          </div>
+        </section>
+        <aside>
+          <KPI label="Completion without human help" value="82%" />
+          <KPI label="Recommended next" value="2-step equations (easy)" />
+        </aside>
       </div>
-      <div className="grid">
-        <div className="card"><div className="kpi"><div className="label">Completion without human help</div><div className="value">82%</div></div></div>
-        <div className="card"><div className="kpi"><div className="label">Recommended next</div><div className="value">2-step equations (easy)</div></div></div>
-      </div>
-      <VariantPicker open={picker} onClose={()=>setPicker(false)} onConfirm={confirmPractice} />
     </div>
-  )
+  );
 }

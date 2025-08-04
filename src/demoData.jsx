@@ -1,14 +1,22 @@
+// src/demoData.jsx
+import React, { createContext, useContext, useMemo, useState } from 'react';
 
-import { createContext, useContext, useEffect, useState } from 'react'
-
-const DemoDataContext = createContext({ dataset: 'g8', setDataset: () => {} })
+const Ctx = createContext(null);
+export const useDemoData = () => useContext(Ctx);
 
 export function DemoDataProvider({ children }) {
-  const [dataset, setDataset] = useState(() => localStorage.getItem('dataset') || 'g8')
-  useEffect(() => { localStorage.setItem('dataset', dataset) }, [dataset])
-  return <DemoDataContext.Provider value={{ dataset, setDataset }}>{children}</DemoDataContext.Provider>
-}
+  const [grade, setGrade] = useState('8');
+  const [role, setRole] = useState('Teacher');
+  const [handoff, setHandoff] = useState(null); // { from, subject, topic, difficulty, count, distractors }
+  const [parentMsgs, setParentMsgs] = useState([]);
+  const pushParent = (text) => setParentMsgs(m => [...m, { ts: Date.now(), text }]);
 
-export function useDemoData() {
-  return useContext(DemoDataContext)
+  const value = useMemo(() => ({
+    grade, setGrade,
+    role, setRole,
+    handoff, setHandoff,
+    parentMsgs, pushParent,
+  }), [grade, role, handoff, parentMsgs]);
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

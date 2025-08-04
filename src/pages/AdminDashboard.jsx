@@ -1,54 +1,59 @@
-import { useEffect, useState } from 'react'
-import { api } from '../api/mockApi.js'
-import { Line, Heatmap } from './charts.jsx'
-import KPI from '../components/KPI.jsx'
-import VariantPicker from '../components/VariantPicker.jsx'
-import { useDemoData } from '../demoData.jsx'
-import { useNavigate } from 'react-router-dom'
+// src/pages/AdminDashboard.jsx
+import React, { useState } from 'react';
+import KPI from '../components/KPI.jsx';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminDashboard() {
-  const { dataset } = useDemoData()
-  const [data, setData] = useState(null)
-  const [picker, setPicker] = useState(false)
-  const [student, setStudent] = useState(null)
-  const nav = useNavigate()
-
-  useEffect(() => { api.getAdminMetrics().then(setData) }, [dataset])
-
-  if (!data) return <div className="card">Loading…</div>
-
-  const startAssign = (s) => { setStudent(s); setPicker(true) }
-  const confirmAssign = (opts) => {
-    setPicker(false)
-    const q = new URLSearchParams({ topic: opts.topic, subject: opts.subject, difficulty: opts.difficulty, count: String(opts.count), distractors: opts.distractors, from: 'admin', student: student?.name || '' }).toString()
-    nav('/practice?' + q)
-  }
+  const nav = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [opts, setOpts] = useState({ subject:'Math', topic:'Linear Equations', difficulty:'easy', count:5, distractors:'numeric' });
 
   return (
-    <div className="grid" style={{gridTemplateColumns: '1fr 1fr'}}>
-      <div className="grid">
-        <div className="grid" style={{gridTemplateColumns:'1fr 1fr 1fr'}}>
-          <KPI label="% Students >80% mastery" value={`${data.top.mastery80}%`} />
-          <KPI label="Grading backlog" value={data.top.backlog} />
-          <KPI label="Avg engagement" value={`${data.top.engagement} / class`} />
-        </div>
-        <div className="card"><h3>Mastery Trend (8 weeks)</h3><Line labels={data.trend.labels} values={data.trend.values} /></div>
-        <div className="card"><h3>Alerts</h3><ul>{data.alerts.map((a,i)=>(<li key={i}>{a}</li>))}</ul></div>
+    <div className="page">
+      <div className="grid two">
+        <section className="card">
+          <h2>Admin Overview</h2>
+          <div className="row">
+            <KPI label="% Students >80% mastery" value="62%"/>
+            <KPI label="Grading backlog" value="3"/>
+          </div>
+          <div className="card">
+            <div className="row" style={{justifyContent:'space-between'}}>
+              <strong>At-risk students</strong>
+              <button className="btn secondary" onClick={()=>setOpen(true)}>Assign practice</button>
+            </div>
+            <ul>
+              <li>Arjun – Mastery 52%</li>
+              <li>Meera – Mastery 55%</li>
+              <li>Dev – Mastery 57%</li>
+            </ul>
+          </div>
+        </section>
+        <aside>
+          <KPI label="Avg engagement" value="5.6 / class" />
+        </aside>
       </div>
 
-      <div className="grid">
-        <div className="card"><h3>Mastery by Topic (Heatmap)</h3><Heatmap labels={data.heatmap.labels} matrix={data.heatmap.matrix} /></div>
-        <div className="card">
-          <h3>At-Risk Cohort</h3>
-          <div className="badge">{data.risk.summary}</div>
-          <table className="table"><thead><tr><th>Student</th><th>Reason</th><th>Action</th></tr></thead>
-            <tbody>
-            {data.risk.students.map((s,i)=>(<tr key={i}><td>{s.name}</td><td>{s.reason}</td><td><button className="btn" onClick={()=>startAssign(s)}>Assign practice</button></td></tr>))}
-            </tbody>
-          </table>
+      {open && (
+        <div className="modal-backdrop" onClick={()=>setOpen(false)}>
+          <div className="modal" onClick={(e)=>e.stopPropagation()}>
+            <h3>Assign practice</h3>
+            <div className="row">
+              <label>Subject<select value={opts.subject} onChange={(e)=>setOpts(o=>({...o,subject:e.target.value}))}><option>Math</option><option>Science</option></select></label>
+              <label>Topic<select value={opts.topic} onChange={(e)=>setOpts(o=>({...o,topic:e.target.value}))}>
+                {opts.subject==='Math' ? <><option>Linear Equations</option><option>Quadratic Equations</option></> : <><option>Atoms</option><option>Chemical Reactions</option></>}
+              </select></label>
+              <label>Difficulty<select value={opts.difficulty} onChange={(e)=>setOpts(o=>({...o,difficulty:e.target.value}))}><option>easy</option><option>medium</option><option>hard</option></select></label>
+              <label># Items<input type="number" min="3" max="10" value={opts.count} onChange={(e)=>setOpts(o=>({...o,count:Number(e.target.value||5)}))}/></label>
+              <label>Distractors<select value={opts.distractors} onChange={(e)=>setOpts(o=>({...o,distractors:e.target.value}))}><option>numeric</option><option>words</option></select></label>
+            </div>
+            <div className="row" style={{justifyContent:'flex-end'}}>
+              <button className="btn secondary" onClick={()=>setOpen(false)}>Cancel</button>
+              <button className="btn" onClick={()=>{ setOpen(false); const qs = new URLSearchParams({...opts, from:'admin'}); nav('/practice?'+qs.toString()); }}>Assign</button>
+            </div>
+          </div>
         </div>
-      </div>
-      <VariantPicker open={picker} onClose={()=>setPicker(false)} onConfirm={confirmAssign} defaults={{ subject: 'Math', topic: 'Linear Equations', difficulty: 'easy', count: 5 }} />
+      )}
     </div>
-  )
+  );
 }

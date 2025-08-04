@@ -1,112 +1,79 @@
-import { useEffect, useMemo, useState } from 'react'
-import { api } from '../api/mockApi.js'
-import KPI from '../components/KPI.jsx'
-import TypingDots from '../components/TypingDots.jsx'
-import MiniForm from '../components/MiniForm.jsx'
-import { useDemoData } from '../demoData.jsx'
-
-const TOPICS = { math: ["Linear Equations", "Quadratic Equations"], science: ["Atoms", "Chemical Reactions"] }
-const normSubject = s => String(s || 'Math').toLowerCase()
+// src/pages/TeacherAssessmentStudio.jsx
+import React, { useEffect, useState } from 'react';
+import KPI from '../components/KPI.jsx';
+import { useDemoData } from '../demoData.jsx';
+import { api } from '../api/mockApi';
 
 export default function TeacherAssessmentStudio() {
-  const { dataset, setDataset } = useDemoData()
-  const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [subject, setSubject] = useState('Math')
-  const [grade, setGrade] = useState(dataset.replace('g','') || '8')
-  const [topic, setTopic] = useState('Linear Equations')
-  const [seed, setSeed] = useState('42')
-  const [count, setCount] = useState(8)
-  const [elapsed, setElapsed] = useState(0)
+  const { grade } = useDemoData();
+  const [subject, setSubject] = useState('Math');
+  const [topic, setTopic] = useState('Linear Equations');
+  const [seed, setSeed] = useState(42);
+  const [count, setCount] = useState(8);
+  const [items, setItems] = useState([]);
+  const [label, setLabel] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const topicOptions = useMemo(() => TOPICS[normSubject(subject)] || TOPICS.math, [subject])
-  useEffect(() => { if (!topicOptions.includes(topic)) setTopic(topicOptions[0]) }, [topicOptions])
-
-  const generate = async () => {
-    setLoading(true); setRows([]); setElapsed(0);
-    const t0 = performance.now()
-    const q = await api.getQuestions(subject, topic, seed, count)
-    const bank = q.items && q.items.length ? q.items : []
-    for (let i=0;i<bank.length;i++) {
-      await new Promise(r=>setTimeout(r, 120))
-      setRows(prev => [...prev, bank[i]])
-      setElapsed(Math.round(performance.now()-t0)/1000)
-    }
-    setLoading(false)
+  async function run() {
+    setLoading(true);
+    const t0 = performance.now();
+    const { items } = await api.generateQuestions({ grade: Number(grade), subject, topic, seed, count });
+    const t1 = performance.now();
+    setItems(items);
+    setLabel(`Loaded via seed ${seed} • count ${count} (Δ~${((t1-t0)/1000).toFixed(1)}s)`);
+    setLoading(false);
   }
-
-  useEffect(() => { generate() }, [dataset, subject, topic])
-
-  const onGradeChange = (e) => {
-    const g = e.target.value; setGrade(g)
-    const next = `g${g}`; if (next !== dataset) setDataset(next)
-  }
+  useEffect(()=>{ run() }, []);
 
   return (
-    <div className="grid" style={{gridTemplateColumns: '1fr 1fr'}}>
-      <div className="grid">
-        <div className="card">
+    <div className="page">
+      <div className="grid two">
+        <section className="card">
           <h2>Assessment Studio</h2>
-          <div className="grid" style={{gridTemplateColumns: '1fr 1fr 1fr'}}>
-            <div>
-              <label>Grade</label>
-              <select value={grade} onChange={onGradeChange}>
-                <option>7</option><option>8</option><option>9</option>
+          <div className="row">
+            <label>Grade
+              <select value={grade} readOnly>
+                <option>{grade}</option>
               </select>
-            </div>
-            <div>
-              <label>Subject</label>
+            </label>
+            <label>Subject
               <select value={subject} onChange={e=>setSubject(e.target.value)}>
                 <option>Math</option><option>Science</option>
               </select>
-            </div>
-            <div>
-              <label>Topic</label>
-              <select className="input" value={topic} onChange={e=>setTopic(e.target.value)}>
-                {topicOptions.map(t => <option key={t} value={t}>{t}</option>)}
+            </label>
+            <label>Topic
+              <select value={topic} onChange={e=>setTopic(e.target.value)}>
+                {subject==='Math' ? <><option>Linear Equations</option><option>Quadratic Equations</option></> :
+                  <><option>Atoms</option><option>Chemical Reactions</option></>}
               </select>
-            </div>
+            </label>
+          </div>
+          <div className="row">
+            <label>Seed<input value={seed} onChange={e=>setSeed(Number(e.target.value)||0)} /></label>
+            <label>Count<input type="number" min="1" max="20" value={count} onChange={e=>setCount(Number(e.target.value)||8)} /></label>
+            <button className="btn" disabled={loading} onClick={run}>{loading?'Generating…':'Generate with AI'}</button>
           </div>
 
-          <MiniForm>
-            <div>
-              <label>Seed</label>
-              <input className="input" value={seed} onChange={e=>setSeed(e.target.value)} style={{width:120}}/>
-            </div>
-            <div>
-              <label>Count</label>
-              <input type="number" className="input" value={count} min={1} max={15} onChange={e=>setCount(Number(e.target.value||8))} style={{width:100}}/>
-            </div>
-            <button className="btn" onClick={generate} style={{marginBottom:0}}>Generate with AI</button>
-            {loading && <TypingDots text="Generating questions" />}
-          </MiniForm>
-        </div>
+          <div className="table-wrap">
+            <div className="small muted">{label}</div>
+            <table className="table">
+              <thead><tr><th>#</th><th>Question</th><th>Answer</th><th>Alt wording A</th><th>Alt wording B</th><th>Rubric</th></tr></thead>
+              <tbody>
+                {items.map((r,i)=>(
+                  <tr key={i}><td>{i+1}</td><td>{r.question}</td><td>{r.answer}</td><td>{r.variantA}</td><td>{r.variantB}</td><td>{r.rubric}</td></tr>
+                ))}
+                {!items.length && !loading && <tr><td colSpan="6" className="muted">No items yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-        <div className="card">
-          <h3>Generated Items</h3>
-          <table className="table mono">
-            <thead><tr><th>#</th><th>Question</th><th>Answer</th><th>Variant 1</th><th>Variant 2</th><th>Rubric</th></tr></thead>
-            <tbody>
-              {rows.map((it, i) => (
-                <tr key={i}>
-                  <td>{i+1}</td>
-                  <td>{it.question}</td>
-                  <td>{it.answer}</td>
-                  <td>{it.variant_1}</td>
-                  <td>{it.variant_2}</td>
-                  <td>{it.rubric}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="grid">
-        <KPI label="Questions generated" value={rows.length || '—'} delta={`~${elapsed.toFixed(1)}s elapsed`}/>
-        <KPI label="Teacher time saved" value="3.0 hrs / week"/>
-        <KPI label="Curriculum alignment" value={`NCERT G${grade} • ${subject} • ${topic}`}/>
+        <aside>
+          <KPI label="Questions generated" value={items.length || '—'} />
+          <KPI label="Teacher time saved" value="3.0 hrs / week" />
+          <KPI label="Curriculum alignment" value={`NCERT G${grade} • ${subject} • ${topic}`} />
+        </aside>
       </div>
     </div>
-  )
+  );
 }

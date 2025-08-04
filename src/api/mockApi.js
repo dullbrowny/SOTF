@@ -1,99 +1,112 @@
-const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+// Mock API for Assessment generation (bank + synthetic) with seeded sampling
+import { mulberry32, pickN, normalizeSeed } from '../utils/random.js';
 
-function datasetBase() {
-  const ds = localStorage.getItem("dataset") || "g8";
-  return `/api/datasets/${ds}`;
+// Minimal local banks (extend as needed)
+const BANK = {
+  Math: {
+    'Linear Equations': [
+      { question: 'Solve for x: 2x + 3 = 11', answer: '4' },
+      { question: 'Solve for x: 5x - 7 = 18', answer: '5' },
+      { question: 'Find x: 3x + 9 = 0', answer: '-3' },
+    ]
+  },
+  Science: {
+    'Atoms': [
+      { question: 'Which subatomic particle determines atomic number?', answer: 'Proton' },
+      { question: 'Which particle has a negative charge?', answer: 'Electron' },
+      { question: 'What changes in an isotope of an element?', answer: 'Neutron count' },
+    ]
+  }
+};
+
+function makeRubric(subject, topic) {
+  if (subject === 'Math') return '1 pt: reasoning; 1 pt: answer';
+  return '1 pt: concept; 1 pt: justification';
 }
 
-async function safeFetchJson(url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
+function altWording(base, rand) {
+  const variants = [
+    'Alt wording A', 'Alt wording B',
+    'Try another phrasing', 'Alternate stem'
+  ];
+  const i1 = Math.floor(rand() * variants.length);
+  let i2 = Math.floor(rand() * variants.length);
+  if (i2 === i1) i2 = (i2 + 1) % variants.length;
+  return [variants[i1], variants[i2]];
 }
 
-function mulberry32(a) {
-  return function() {
-    var t = a += 0x6D2B79F5;
-    t = Math.imul(t ^ t >>> 15, t | 1);
-    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  }
+// Synthetic generators — add variety
+function synthMathLinear(rand, grade) {
+  // ax + b = c; numbers scaled by grade
+  const a = 1 + Math.floor(rand() * 6);
+  const b = Math.floor(rand() * 12);
+  const c = b + (1 + Math.floor(rand() * 8)) * a;
+  const q = `Solve for x: ${a}x + ${b} = ${c}`;
+  const ans = String((c - b) / a);
+  return { question: q, answer: ans };
 }
 
-export async function getQuestionsBySubjectTopic(subject = "math", topic = "", seed = 1, count = 8) {
-  await delay(100);
-  const sub = String(subject || "math").toLowerCase().trim();
-  const top = String(topic || "").toLowerCase().replace(/\s+/g, "-").trim();
-  const base = datasetBase();
-
-  let bank = [];
-  async function pushFrom(url) {
-    const data = await safeFetchJson(url);
-    if (data && Array.isArray(data.items)) bank = bank.concat(data.items);
-    return !!data;
-  }
-
-  if (top) await pushFrom(`${base}/${sub}/${top}/questions.json`);
-  if (!bank.length) await pushFrom(`${base}/${sub}/questions.json`);
-  if (!bank.length) await pushFrom(`${base}/questions.json`);
-
-  const rnd = mulberry32(Number(seed) || 1);
-  const chosen = [];
-  for (let i = 0; i < Math.min(count, bank.length || 8); i++) {
-    const idx = Math.floor(rnd() * (bank.length));
-    chosen.push(bank[idx]);
-  }
-
-  return { items: chosen, _source: bank.length ? 'mixed' : '(none)' };
+function synthScienceAtoms(rand, grade) {
+  const stems = [
+    'Which subatomic particle determines atomic number?',
+    'Which particle has a negative charge?',
+    'What changes in an isotope of an element?',
+    'Which particle is found in the nucleus and is neutral?',
+  ];
+  const answers = {
+    0: 'Proton',
+    1: 'Electron',
+    2: 'Neutron count',
+    3: 'Neutron'
+  };
+  const idx = Math.floor(rand() * stems.length);
+  return { question: stems[idx], answer: answers[idx] };
 }
 
-export async function generatePractice(subject = "math", topic = "Linear Equations", opts = {}) {
-  await delay(100);
-  const { difficulty='easy', count=5, distractors='numeric' } = opts || {};
-  const diffMap = { easy: [2,3,4,5], medium: [1,2,3,4], hard: [0,2,4,6] };
-  const optsArr = diffMap[difficulty] || [2,3,4,5];
+function mixBankAndSynthetic({ subject, topic, grade, seed, count }) {
+  const s = normalizeSeed(seed);
+  const rand = mulberry32(s);
+  const bank = (BANK[subject] && BANK[subject][topic]) ? BANK[subject][topic] : [];
+  const nFromBank = Math.min(bank.length, Math.floor(count * 0.6)); // 60% from bank
+  const nSynth = count - nFromBank;
 
-  const items = Array.from({length: count}).map((_,i)=>{
-    const choices = optsArr.map(n=>String(n+(i%2)));
-    const correct = String(4);
-    return {
-      question: `${i+1}. (${subject} • ${topic} • ${difficulty}) Solve for x: 2x + ${3+i} = ${11+i}`,
-      options: distractors==='words' ? choices.map(x=>`option ${x}`) : choices,
-      answer: distractors==='words' ? `option ${correct}` : correct,
-      hint: difficulty==='hard' ? 'Isolate x and check with substitution.' : 'Reverse the last operation.'
+  const picked = pickN(bank, nFromBank, rand);
+
+  const synths = [];
+  for (let i = 0; i < nSynth; i++) {
+    if (subject === 'Math' && topic === 'Linear Equations') {
+      synths.push(synthMathLinear(rand, grade));
+    } else if (subject === 'Science' && topic === 'Atoms') {
+      synths.push(synthScienceAtoms(rand, grade));
+    } else {
+      // default: echo a generic
+      synths.push({ question: `${subject} • ${topic} (G${grade}): Item ${i+1}`, answer: 'A' });
     }
+  }
+  const merged = picked.concat(synths);
+  // attach alt wording + rubric + id
+  return merged.map((it, idx) => {
+    const [altA, altB] = altWording(it.question, rand);
+    return {
+      id: idx + 1,
+      question: it.question,
+      answer: it.answer,
+      altA, altB,
+      rubric: makeRubric(subject, topic)
+    };
   });
+}
+
+// PUBLIC API
+export async function generateAssessmentItems({ grade, subject, topic, seed = 42, count = 8 }) {
+  // simulate latency
+  await new Promise(r => setTimeout(r, 150));
+  const items = mixBankAndSynthetic({ grade, subject, topic, seed, count });
   return { items };
 }
 
-const evidenceBank = (id) => ({
-  question: "Explain why 2x + 3 = 11 leads to x = 4",
-  student: [ "I subtracted 3 then divided by 2", "I think x is 5 because 2*5+3=13", "I moved 3 to RHS and divided by 2" ][id%3],
-  rubric: [
-    { dim: "Setup", score: (id%5?1:0), note: (id%5? "Correct isolation of variable": "Incorrect rearrangement") },
-    { dim: "Method", score: (id%2?1:0), note: (id%2? "Valid operations used": "Missing an operation") },
-    { dim: "Answer", score: (id%4?1:0), note: (id%4? "Correct final value": "Arithmetic slip at end") },
-  ]
-});
+// add both of these lines near the bottom:
+export const api = { generateAssessmentItems };    // compat for old callers
+export default { generateAssessmentItems };        // optional default export
 
-async function get(path) {
-  await delay(100);
-  const url = `${datasetBase()}${path}`;
-  const data = await safeFetchJson(url);
-  return data ?? {};
-}
 
-export const api = {
-  getQuestions: (subject, topic, seed, count) => getQuestionsBySubjectTopic(subject, topic, seed, count),
-  getGradingBatch: () => get("/grading.json"),
-  getPractice: () => get("/practice.json"),
-  getTutorScript: () => get("/tutor.json"),
-  getAdminMetrics: () => get("/admin.json"),
-  getParentDigest: () => get("/parent.json"),
-  generatePractice,
-  evidenceBank,
-};
