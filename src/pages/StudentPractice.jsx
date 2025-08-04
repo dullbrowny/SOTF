@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import KPI from '../components/KPI.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
-import { api } from '../api/mockApi';
+import { api } from '../api/mockApi.js';
 
 function useQuery() {
   const { search } = useLocation();
@@ -31,11 +31,11 @@ export default function StudentPractice() {
         difficulty: q.difficulty || 'easy',
         count: Number(q.count || 5),
         distractors: q.distractors || 'numeric',
-      });
+      }).catch(()=>[]);
       if (!alive) return;
-      setItems(set); setIdx(0); setDone(false); setStreak(0);
+      setItems(Array.isArray(set) ? set : []); setIdx(0); setDone(false); setStreak(0);
     })();
-    return () => (alive = false);
+    return () => { alive = false; };
   }, [q.subject, q.topic, q.difficulty, q.count, q.distractors]);
 
   const cur = items[idx] || null;
@@ -78,7 +78,7 @@ export default function StudentPractice() {
                   <button className="btn secondary" key={j} onClick={()=>choose(op)}>{op}</button>
                 ))}
               </div>
-              <div className="badge" style={{marginTop:8}}>{cur.hint}</div>
+              {cur.hint && <div className="badge" style={{marginTop:8}}>{cur.hint}</div>}
             </div>
           )}
 
@@ -99,3 +99,4 @@ export default function StudentPractice() {
     </div>
   );
 }
+
