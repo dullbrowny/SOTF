@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { generateAssessmentItems } from '../api/mockApi.js';
+import { generateAssessmentItems, api } from '../api/mockApi.js';
 
 /**
  * Lightweight toast system (no external deps)
@@ -166,21 +166,49 @@ export default function TeacherAssessmentStudio() {
     return Math.round((withAlt / rows.length) * 100);
   }, [rows]);
 
-  const handleGenerate = async () => {
-    setLoading(true);
-    const start = performance.now();
-    try {
-      const data = await generateAssessmentItems({ seed, count: Number(count) });
-      // Expecting items with fields: id, stem, answer, altA, altB, rubric
-      setRows(Array.isArray(data) ? data : []);
-      setElapsedMs(performance.now() - start);
-    } catch (err) {
-      console.error(err);
-      show('Generation failed. Please try again.');
-    } finally {
-      setLoading(false); // <- required guardrail
+// --- inside the component ---
+const handleGenerate = async () => {
+  setLoading(true);
+  const start = performance.now();
+  try {
+    const n = Number(count);
+
+    // Try multiple call signatures in order
+    const attempts = [
+      () => generateAssessmentItems({ seed, count: n }),
+      () => generateAssessmentItems(seed, n),
+      () => api?.generateAssessmentItems?.({ seed, count: n }),
+      () => api?.generateAssessmentItems?.(seed, n),
+    ];
+
+    let data, items = [];
+    for (const call of attempts) {
+      if (!call) continue;
+      try {
+        data = await call();
+        items = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+        if (items.length) break;
+      } catch (e) {
+        // keep trying other signatures
+        // console.debug('generate attempt failed', e);
+      }
     }
-  };
+
+    if (!items.length) {
+      console.warn('generateAssessmentItems returned unexpected shape:', data);
+      show('No items returned. Check mockApi shape (see console).');
+    }
+
+    setRows(items || []);
+    setElapsedMs(performance.now() - start);
+  } catch (err) {
+    console.error(err);
+    show('Generation failed. See console.');
+  } finally {
+    setLoading(false); // never stuck
+  }
+};
+
 
   const handleExport = () => {
     if (!rows.length) {
@@ -229,6 +257,7 @@ export default function TeacherAssessmentStudio() {
   return (
     <div style={{ padding: 20 }}>
       {/* Top: Controls */}
+      <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 6 }}>Assessment • v2</div>
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div style={{ minWidth: 280, flex: '1 1 340px' }}>
           <div style={subtleLabel}>Seed</div>
