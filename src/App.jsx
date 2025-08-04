@@ -11,24 +11,20 @@ import AdminDashboard from "./pages/AdminDashboard.jsx";
 import ParentDigest from "./pages/ParentDigest.jsx";
 import DemoScript from "./components/DemoScript.jsx";
 
+/** Top-right "Demo data" switcher — now driven ONLY by global grade */
 function DatasetSwitcher() {
-  const { dataset, setDataset, setGrade } = useDemoData();
+  const { grade, setGrade } = useDemoData();
 
   const onChange = (e) => {
-    const v = e.target.value;            // e.g., "g7"
-    // Update dataset if setter exists
-    if (typeof setDataset === "function") setDataset(v);
-    else console.warn('setDataset is not available; ignoring "Demo data" change');
-
-    // Also update global grade so pages react immediately
-    const gMatch = (v || "").match(/\d+/); // "7" from "g7"
+    const v = e.target.value;         // e.g., "g7"
+    const gMatch = (v || "").match(/\d+/);
     if (gMatch && typeof setGrade === "function") setGrade(gMatch[0]);
   };
 
   return (
     <div className="row">
       <span className="badge">Demo data</span>
-      <select value={dataset} onChange={onChange}>
+      <select value={`g${grade || "7"}`} onChange={onChange}>
         <option value="g6">Grade 6</option>
         <option value="g7">Grade 7</option>
         <option value="g8">Grade 8</option>
@@ -67,7 +63,7 @@ function RoleSwitcher() {
 }
 
 export default function App() {
-  const { setDataset, setGrade } = useDemoData();
+  const { setGrade } = useDemoData();
   const loc = useLocation();
   const nav = useNavigate();
 
@@ -78,7 +74,6 @@ export default function App() {
     const route = p.get("route");
 
     if (ds) {
-      if (typeof setDataset === "function") setDataset(ds);
       const gMatch = ds.match(/\d+/);
       if (gMatch && typeof setGrade === "function") setGrade(gMatch[0]);
     }
