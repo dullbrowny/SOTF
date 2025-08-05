@@ -1,195 +1,220 @@
-// src/pages/StudentTutorChat.jsx
-import React, { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 
-const T = { card:'#0f172a', border:'#1f2937', text:'#e5e7eb', sub:'#9ca3af', header:'#0b1220', primary:'#10bcd6' };
-const card = { background:T.card, border:`1px solid ${T.border}`, borderRadius:12, padding:16, color:T.text };
-
-const SUBJECTS = ['Math','Science','Biology'];
-const GRADES = ['6','7','8','9','10'];
-const TOPICS = {
-  Math:['Linear Equations','Integers — operations','Fractions — add, subtract, compare'],
-  Science:['Physics — speed problems','Physics — acceleration'],
-  Biology:['Punnett squares — monohybrid']
+const DEFAULTS = {
+  subject: "Math",
+  grade: "8",
+  topic: "Linear Equations",
+  difficulty: "easy",
+  distractors: "numeric",
+  count: 5,
 };
 
-export default function StudentTutorChat(){
-  const nav = useNavigate();
+const MODES = ["Standard", "ELI5", "Socratic", "Steps"];
+const COMFORT = ["Not at all", "A bit", "Mostly", "I’ve got it"];
 
-  // chat state (static / simulated for mock)
+export default function StudentTutorChat() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [subject, setSubject] = useState(searchParams.get("subject") || DEFAULTS.subject);
+  const [grade, setGrade] = useState(searchParams.get("grade") || DEFAULTS.grade);
+  const [topic, setTopic] = useState(searchParams.get("topic") || DEFAULTS.topic);
+  const [difficulty, setDifficulty] = useState(searchParams.get("difficulty") || DEFAULTS.difficulty);
+  const [distractors, setDistractors] = useState(searchParams.get("distractors") || DEFAULTS.distractors);
+  const [count, setCount] = useState(Number(searchParams.get("count")) || DEFAULTS.count);
+
+  const [mode, setMode] = useState(searchParams.get("mode") || "Standard");
+  const [comfort, setComfort] = useState(searchParams.get("comfort") || "A bit");
+
   const [messages, setMessages] = useState([
-    { role:'ai', text:'Hi! What are you stuck on in Linear Equations today?' }
+    {
+      role: "assistant",
+      text: `You're in ${mode} mode. Tell me what part of ${topic} in Grade ${grade} ${subject} you’d like help with.`,
+      meta: { mode, comfort },
+    },
   ]);
-  const [input, setInput] = useState('');
 
-  // mode & comfort
-  const MODES = ['Standard','ELI5','Socratic','Steps'];
-  const [mode, setMode] = useState('Standard');
-  const [comfort, setComfort] = useState('Mostly'); // Not at all / A bit / Mostly / I’ve got it
+  const [input, setInput] = useState("");
+  const listRef = useRef(null);
 
-  // practice set controls
-  const [subject, setSubject] = useState('Math');
-  const [grade, setGrade] = useState('8');
-  const [topic, setTopic] = useState('Linear Equations');
-  const [difficulty, setDifficulty] = useState('easy');
-  const [count, setCount] = useState(5);
+  // Sync URL only when changed
+  useEffect(() => {
+    const desired = new URLSearchParams({
+      subject, grade, topic, difficulty, distractors, count: String(count),
+      mode, comfort
+    }).toString();
+    if (desired !== searchParams.toString()) {
+      setSearchParams(desired, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subject, grade, topic, difficulty, distractors, count, mode, comfort]);
 
-  const topicList = useMemo(()=>TOPICS[subject] || [], [subject]);
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
+  }, [messages]);
 
   function send() {
-    if (!input.trim()) return;
-
-    const user = { role:'you', text: input.trim() };
-    setMessages(m => [...m, user]);
-
-    // very small simulator — tailor first bot line by mode
-    const reply = (() => {
-      if (mode === 'ELI5') {
-        return 'Imagine x is a box. We want the box alone. What could we remove from both sides to get rid of the +3?';
-      }
-      if (mode === 'Socratic') {
-        // ask one question at a time, and keep using comfort to tune
-        const tone = comfort === 'Not at all' ? 'Let’s go slowly.' :
-                     comfort === 'A bit' ? 'We’ll take it step by step.' :
-                     comfort === 'Mostly' ? 'You’re close.' : 'Quick check:';
-        return `${tone} What operation would undo the “+3” on the left?`;
-      }
-      if (mode === 'Steps') {
-        return 'Step 1: Subtract 3 from both sides.\nStep 2: Divide both sides by 2.\nWhat value do you get for x?';
-      }
-      return 'Try subtracting 3 from both sides, then divide by 2. What do you get?';
-    })();
-
-    setMessages(m => [...m, { role:'ai', text: reply }]);
-    setInput('');
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    const userMsg = { role: "user", text: trimmed };
+    const reply = generateReply(trimmed, { mode, comfort, subject, grade, topic, difficulty });
+    setMessages((m) => [...m, userMsg, reply]);
+    setInput("");
   }
 
-  function toPractice() {
-    const params = new URLSearchParams({
-      from: 'tutor',
-      subject, topic, grade, difficulty, count: String(count)
-    });
-    nav(`/practice?${params.toString()}`);
-  }
+  const practiceHref = useMemo(() => {
+    const qp = new URLSearchParams({
+      from: "tutor",
+      subject, grade, topic, difficulty, distractors, count: String(count),
+    }).toString();
+    return `/practice?${qp}`;
+  }, [subject, grade, topic, difficulty, distractors, count]);
 
   return (
-    <div style={{ padding:20, color:T.text }}>
-      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:16 }}>
-        {/* Chat */}
-        <div style={card}>
-          <div style={{ fontSize:22, fontWeight:700, marginBottom:8 }}>AI Tutor</div>
-          <div style={{ display:'flex', gap:8, marginBottom:12, color:T.sub, fontSize:12 }}>
-            <span>Topic: Linear Equations</span><span>•</span><span>Source: NCERT G8</span>
-          </div>
-
-          <div style={{ display:'flex', flexDirection:'column', gap:10, minHeight:220, marginBottom:12 }}>
-            {messages.map((m,i)=>(
-              <div key={i} style={{
-                alignSelf: m.role==='you'?'flex-end':'flex-start',
-                background: m.role==='you'?T.primary:T.header,
-                color: m.role==='you'?'#00151a':T.text,
-                border:`1px solid ${T.border}`, borderRadius:12, padding:'8px 12px', maxWidth:'80%'
-              }}>
-                <div style={{ fontSize:11, color: m.role==='you'?'#00323d':T.sub, marginBottom:4 }}>
-                  {m.role==='you'?'You':'AI Tutor'}
-                </div>
-                <div style={{ whiteSpace:'pre-wrap' }}>{m.text}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ display:'flex', gap:8 }}>
-            <input value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask a question…"
-                   style={{ flex:1, background:T.header, color:T.text, border:`1px solid ${T.border}`, borderRadius:10, padding:'10px 12px' }} />
-            <button onClick={send}
-                    style={{ background:T.primary, color:'#00151a', border:'none', borderRadius:10, padding:'10px 14px', fontWeight:700 }}>
-              Send
-            </button>
-          </div>
-
-          {/* Mode & comfort */}
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:12 }}>
-            <span style={{ alignSelf:'center', color:T.sub, fontSize:12 }}>Mode</span>
-            {MODES.map(m=>(
-              <button key={m}
-                onClick={()=>setMode(m)}
-                style={{ background: m===mode?T.primary:T.header, color: m===mode?'#00151a':T.text,
-                         border:`1px solid ${T.border}`, borderRadius:999, padding:'6px 10px' }}>
-                {m}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:8 }}>
-            <span style={{ alignSelf:'center', color:T.sub, fontSize:12 }}>Comfort</span>
-            {['Not at all','A bit','Mostly','I’ve got it'].map(c=>(
-              <button key={c}
-                onClick={()=>setComfort(c)}
-                style={{ background: c===comfort?T.primary:T.header, color: c===comfort?'#00151a':T.text,
-                         border:`1px solid ${T.border}`, borderRadius:999, padding:'6px 10px' }}>
-                {c}
-              </button>
-            ))}
-          </div>
+    <div className="container" style={{ maxWidth: 960 }}>
+      {/* Header */}
+      <header className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+        <h2 style={{ margin: 0 }}>AI Tutor</h2>
+        <div className="row">
+          <select className="input" value={mode} onChange={e => setMode(e.target.value)} title="Tutor mode">
+            {MODES.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <select className="input" value={comfort} onChange={e => setComfort(e.target.value)} title="Comfort level">
+            {COMFORT.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <Link className="btn" to={practiceHref} title="Create a practice set from these settings">
+            Make a practice set
+          </Link>
         </div>
+      </header>
 
-        {/* Make a practice set */}
-        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-          <div style={card}>
-            <div style={{ fontSize:12, color:T.sub }}>Completion without human help</div>
-            <div style={{ fontSize:28, fontWeight:800 }}>82%</div>
-          </div>
-
-          <div style={card}>
-            <div style={{ fontSize:12, color:T.sub }}>Recommended next</div>
-            <div style={{ fontSize:22, fontWeight:800 }}>2-step equations (easy)</div>
-          </div>
-
-          <div style={card}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-              <div>
-                <div style={{ fontSize:12, color:T.sub }}>Subject</div>
-                <select value={subject} onChange={e=>{ setSubject(e.target.value); setTopic((TOPICS[e.target.value]||[])[0]||''); }}
-                        style={{ width:'100%', background:T.header, color:T.text, border:`1px solid ${T.border}`, borderRadius:8, padding:8 }}>
-                  {SUBJECTS.map(s=><option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize:12, color:T.sub }}>Grade</div>
-                <select value={String(grade)} onChange={e=>setGrade(e.target.value)}
-                        style={{ width:'100%', background:T.header, color:T.text, border:`1px solid ${T.border}`, borderRadius:8, padding:8 }}>
-                  {GRADES.map(g=><option key={g} value={g}>G{g}</option>)}
-                </select>
-              </div>
-              <div style={{ gridColumn:'span 2' }}>
-                <div style={{ fontSize:12, color:T.sub }}>Topic</div>
-                <select value={topic} onChange={e=>setTopic(e.target.value)}
-                        style={{ width:'100%', background:T.header, color:T.text, border:`1px solid ${T.border}`, borderRadius:8, padding:8 }}>
-                  {topicList.map(t=><option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize:12, color:T.sub }}>Difficulty</div>
-                <select value={difficulty} onChange={e=>setDifficulty(e.target.value)}
-                        style={{ width:'100%', background:T.header, color:T.text, border:`1px solid ${T.border}`, borderRadius:8, padding:8 }}>
-                  {['easy','medium','hard'].map(d=><option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize:12, color:T.sub }}>Count</div>
-                <input type="number" min={1} max={20} value={count} onChange={e=>setCount(Number(e.target.value))}
-                       style={{ width:'100%', background:T.header, color:T.text, border:`1px solid ${T.border}`, borderRadius:8, padding:8 }} />
-              </div>
-            </div>
-
-            <button onClick={toPractice}
-                    style={{ marginTop:12, width:'100%', background:T.primary, color:'#00151a', border:'none', borderRadius:10, padding:'10px 14px', fontWeight:700 }}>
-              Make a practice set
-            </button>
-          </div>
+      {/* Controls */}
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))" }}>
+          <Labeled label="Subject"><input className="input" value={subject} onChange={e => setSubject(e.target.value)} /></Labeled>
+          <Labeled label="Grade"><input className="input" value={grade} onChange={e => setGrade(e.target.value)} /></Labeled>
+          <Labeled label="Topic"><input className="input" value={topic} onChange={e => setTopic(e.target.value)} /></Labeled>
+          <Labeled label="Difficulty">
+            <select className="input" value={difficulty} onChange={e => setDifficulty(e.target.value)}>
+              <option value="easy">easy</option><option value="medium">medium</option><option value="hard">hard</option>
+            </select>
+          </Labeled>
+          <Labeled label="Distractors">
+            <select className="input" value={distractors} onChange={e => setDistractors(e.target.value)}>
+              <option value="numeric">numeric</option><option value="symbolic">symbolic</option><option value="conceptual">conceptual</option>
+            </select>
+          </Labeled>
+          <Labeled label="Count">
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={20}
+              value={count}
+              onChange={e => setCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
+            />
+          </Labeled>
         </div>
+      </section>
+
+      {/* Chat */}
+      <section className="card" style={{ display: "grid", gridTemplateRows: "1fr auto", height: "60vh" }}>
+        <div ref={listRef} style={{ overflowY: "auto", padding: 12 }}>
+          {messages.map((m, i) => <MessageBubble key={i} role={m.role} text={m.text} meta={m.meta} />)}
+        </div>
+        <div className="row" style={{ padding: 12, borderTop: "1px solid #1f2937" }}>
+          <input
+            className="input"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" ? send() : null}
+            placeholder={`Ask about ${topic}…`}
+            style={{ flex: 1 }}
+          />
+          <button className="btn" onClick={send}>Send</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Labeled({ label, children }) {
+  return (
+    <label style={{ display: "grid", gap: 6, fontSize: 14 }}>
+      <span style={{ color: "var(--muted)" }}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function MessageBubble({ role, text, meta }) {
+  const isUser = role === "user";
+  return (
+    <div style={{
+      display: "flex",
+      justifyContent: isUser ? "flex-end" : "flex-start",
+      marginBottom: 8
+    }}>
+      <div style={{
+        maxWidth: "80%",
+        background: isUser ? "#0b1220" : "var(--card)",
+        border: "1px solid #1f2937",
+        padding: "8px 10px",
+        borderRadius: 8,
+        whiteSpace: "pre-wrap"
+      }}>
+        {text}
+        {meta?.expand && (
+          <details style={{ marginTop: 6 }}>
+            <summary style={{ cursor: "pointer" }}>Show steps</summary>
+            <div style={{ marginTop: 6 }}>{meta.expand}</div>
+          </details>
+        )}
       </div>
     </div>
   );
+}
+
+function generateReply(userText, ctx) {
+  const { mode, comfort, topic } = ctx;
+
+  const tone = {
+    "Not at all": { pre: "No worries—let’s go slow. ", post: " You’re doing fine; we’ll build it step by step." },
+    "A bit": { pre: "Alright, let’s unpack that. ", post: " Tell me where it still feels fuzzy." },
+    "Mostly": { pre: "", post: " Quick check: can you restate the key idea in one line?" },
+    "I’ve got it": { pre: "", post: "" },
+  }[comfort] || { pre: "", post: "" };
+
+  if (mode === "Socratic") {
+    const q = userText.toLowerCase().includes("stuck")
+      ? "Where exactly do you feel stuck—setting up the equation or solving it?"
+      : "If 3x + 5 = 20, what operation removes +5 while keeping balance?";
+    return { role: "assistant", text: `${tone.pre}${q}${tone.post}` };
+  }
+
+  if (mode === "ELI5") {
+    const expl = `${topic} is like balancing a seesaw: whatever you do to one side, do to the other. Undo extras around the unknown until it’s alone.`;
+    return { role: "assistant", text: `${tone.pre}${expl}${tone.post}` };
+  }
+
+  if (mode === "Steps") {
+    const steps = [
+      "Translate the problem into an equation.",
+      "Combine like terms (if any).",
+      "Move constants off the variable by +/−.",
+      "Isolate the variable by ×/÷.",
+      "Check by substitution.",
+    ];
+    return {
+      role: "assistant",
+      text: `${tone.pre}We’ll do this in a few focused steps.${tone.post}`,
+      meta: { expand: steps.map((s, i) => `${i + 1}. ${s}`).join("\n") },
+    };
+  }
+
+  // Standard
+  const concise = `Focus on translating words to an equation, then do the same operation on both sides to isolate the variable.`;
+  const check = `Try a quick example and tell me your first step.`;
+  return { role: "assistant", text: `${tone.pre}${concise}\n\n${check}${tone.post}` };
 }
 
