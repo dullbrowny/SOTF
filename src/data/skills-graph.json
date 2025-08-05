@@ -1,0 +1,27 @@
+{
+  "Math:6": {
+    "strands": {
+      "Algebra": {
+        "skills": [
+          { "id": "ALG.LE.Q1", "name": "One-step linear equations", "prereqs": ["ALG.OP.BAL"] },
+          { "id": "ALG.LE.Q2", "name": "Two-step linear equations", "prereqs": ["ALG.LE.Q1"] }
+        ]
+      },
+      "Number Sense": {
+        "skills": [
+          { "id": "ALG.OP.BAL", "name": "Balance and inverse operations", "prereqs": [] }
+        ]
+      }
+    }
+  },
+  "Math:8": {
+    "strands": {
+      "Algebra": {
+        "skills": [
+          { "id": "ALG.LE.Q1", "name": "One-step linear equations", "prereqs": ["ALG.OP.BAL"] },
+          { "id": "ALG.LE.Q2", "name": "Two-step linear equations", "prereqs": ["ALG.LE.Q1"] }
+        ]
+      }
+    }
+  }
+}
