@@ -73,7 +73,7 @@ export default function StudentTutorChatAdaptive() {
         <div className="row">
           <select value={mode} onChange={e=>setMode(e.target.value)} title="Tutor mode">{MODES.map(m=><option key={m} value={m}>{m}</option>)}</select>
           <select value={comfort} onChange={e=>setComfort(e.target.value)} title="Comfort level">{COMFORT.map(c=><option key={c} value={c}>{c}</option>)}</select>
-          <Link className="btn compact" to={practiceHref}>Make a practice set</Link>
+          <Link className="btn" to={practiceHref}>Make a practice set</Link>
         </div>
       </header>
 
@@ -107,43 +107,5 @@ export default function StudentTutorChatAdaptive() {
 }
 function Labeled({label,children}){ return (<label style={{display:"grid",gap:6,fontSize:14}}><span style={{color:"var(--muted)"}}>{label}</span>{children}</label>); }
 function MessageBubble({ role, text, meta }){ const isUser = role==="user"; return (<div style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start",marginBottom:8}}><div style={{maxWidth:"80%",background:isUser?"#0b1220":"var(--card)",border:"1px solid #1f2937",padding:"8px 10px",borderRadius:8,whiteSpace:"pre-wrap"}}>{text}{meta?.expand && (<details style={{marginTop:6}}><summary style={{cursor:"pointer"}}>Show steps</summary><div style={{marginTop:6}}>{meta.expand}</div></details>)}</div></div>); }
-function generateReply(userText, ctx) {
-  const { mode, comfort, topic } = ctx;
-
-  const tone = {
-    "Not at all": { pre: "No worries—let’s go slow. ", post: " You’re doing fine; we’ll build it step by step." },
-    "A bit":      { pre: "Alright, let’s unpack that. ", post: " Tell me where it still feels fuzzy." },
-    "Mostly":     { pre: "", post: " Quick check: can you restate the key idea in one line?" },
-    "I’ve got it":{ pre: "", post: "" }
-  }[comfort] || { pre: "", post: "" };
-
-  const standard = () =>
-    `${tone.pre}In ${topic}, translate words into an equation and perform the same operation on both sides to isolate the variable.${tone.post}`;
-
-  const eli5 = () =>
-    `${tone.pre}Think of the equation like a see-saw: if you add 3 on one side, add 3 on the other so it stays level. Keep doing the opposite action until x is alone.${tone.post}`;
-
-  const steps = () => ({
-    text: `${tone.pre}Here’s a short plan for ${topic}.${tone.post}`,
-    meta: {
-      expand: [
-        "1) Write the equation clearly.",
-        "2) Identify the operation on x.",
-        "3) Apply the inverse operation to both sides.",
-        "4) Simplify and check."
-      ].join("\n")
-    }
-  });
-
-  const socratic = () => ({
-    text: `${tone.pre}If the equation is 2x + 5 = 13, what's the very first thing you'd do to both sides?${tone.post}`
-  });
-
-  switch (mode) {
-    case "ELI5":     return { role: "assistant", text: eli5() };
-    case "Steps":    return { role: "assistant", ...steps() };
-    case "Socratic": return { role: "assistant", ...socratic() };
-    default:         return { role: "assistant", text: standard() };
-  }
-}
+function generateReply(){ const concise = "Focus on translating words to an equation, then do the same operation on both sides to isolate the variable."; const check="Try a quick example and tell me your first step."; return { role:"assistant", text: `${concise}\n\n${check}`}; }
 function normalizeBatchToVariants(raw, types){ if(!Array.isArray(raw)) return []; return raw.map((r,i)=>{ const options = Array.isArray(r.choices)? r.choices:[]; const ansIndex = options.findIndex(o=> String(o).trim()===String(r.answer).trim()); const variant = (types.includes("numeric") && i%3===2) ? "numeric":"mcq"; if(variant==="mcq" && options.length>=2) return { id:r.id, variant:"mcq", stem:r.stem, options, correct: ansIndex>=0?ansIndex:0, rubricHint: r.rubric || "" }; return { id:r.id, variant:"numeric", stem:r.stem, answer:r.answer, tolerance:0, rubricHint: r.rubric || "" }; }); }

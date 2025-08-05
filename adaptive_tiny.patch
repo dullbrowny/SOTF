@@ -1,0 +1,150 @@
+diff --git a/src/styles/adaptive.css b/src/styles/adaptive.css
+index 1111111..2222222 100644
+--- a/src/styles/adaptive.css
++++ b/src/styles/adaptive.css
+@@ -1,14 +1,34 @@
+ /* Shared 3-pane grid for Practice & Tutor */
+ .practice-grid {
+   display: grid;
+   grid-template-columns: 260px 1fr 300px;
+   gap: 16px;
+ }
+ .practice-grid .left, .practice-grid .center, .practice-grid .right {
+   min-width: 0;
+ }
+ @media (max-width: 1100px) {
+   .practice-grid { grid-template-columns: 1fr; }
+   .practice-grid .left, .practice-grid .right { display: none; }
+ }
+ .progress { height:3px; background:#233; border-radius:2px; }
+ .progress > span { display:block; height:100%; background:#ef4444; border-radius:2px; }
+ .muted { color: var(--muted); }
++
++/* Compact CTA used in dense toolbars (Tutor header) */
++.btn.compact { padding: 6px 10px; font-size: 13px; border-radius: 10px; }
++
++/* Keep rails visible while center content scrolls */
++.practice-grid .left,
++.practice-grid .right {
++  position: sticky;
++  top: 96px;      /* adjust if your top bar height differs */
++  align-self: start;
++}
++
++/* Taller chat card with internal scroll */
++.tutor-chat {
++  display: grid;
++  grid-template-rows: 1fr auto;
++  height: 60vh;   /* was ~46vh inline */
++}
+diff --git a/src/data/mini-lessons.js b/src/data/mini-lessons.js
+index 3333333..4444444 100644
+--- a/src/data/mini-lessons.js
++++ b/src/data/mini-lessons.js
+@@ -28,6 +28,20 @@ export const MINI_LESSONS = {
+     quickCheck: {
+       kind: "numeric",
+       stem: "Solve x + 5 = 12",
+       answer: 7
+     }
+-  }
++  },
++  "ALG.LE.Q2": {
++    title: "Two-step Linear Equations (120s)",
++    bullets: [
++      "Undo addition/subtraction first, then undo multiplication/division.",
++      "Keep both sides balanced at every step.",
++      "Check by substitution."
++    ],
++    diagram: "two-step.svg",
++    quickCheck: {
++      kind: "numeric",
++      stem: "Solve 2x + 3 = 11",
++      answer: 4
++    }
++  }
+ };
+diff --git a/src/pages/StudentTutorChat.jsx b/src/pages/StudentTutorChat.jsx
+index 5555555..6666666 100644
+--- a/src/pages/StudentTutorChat.jsx
++++ b/src/pages/StudentTutorChat.jsx
+@@ -41,7 +41,7 @@ export default function StudentTutorChatAdaptive() {
+   return (
+     <div className="container" style={{ maxWidth: 1280 }}>
+       <header className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+         <h2 style={{ margin: 0 }}>AI Tutor</h2>
+         <div className="row">
+           <select value={mode} onChange={e => setMode(e.target.value)} title="Tutor mode">
+             {MODES.map(m => <option key={m} value={m}>{m}</option>)}
+           </select>
+           <select value={comfort} onChange={e => setComfort(e.target.value)} title="Comfort level">
+             {COMFORT.map(c => <option key={c} value={c}>{c}</option>)}
+           </select>
+-          <Link className="btn" to={practiceHref} title="Create a practice set from these settings">Make a practice set</Link>
++          <Link className="btn compact" to={practiceHref} title="Create a practice set from these settings">Make a practice set</Link>
+         </div>
+       </header>
+@@ -74,7 +74,7 @@ export default function StudentTutorChatAdaptive() {
+-          <section className="card" style={{ display: "grid", gridTemplateRows: "1fr auto", height: "46vh", marginBottom: 12 }}>
++          <section className="card tutor-chat" style={{ marginBottom: 12 }}>
+             <div ref={listRef} style={{ overflowY: "auto", padding: 12 }}>
+               {messages.map((m, i) => <MessageBubble key={i} role={m.role} text={m.text} meta={m.meta} />)}
+             </div>
+             <div className="row" style={{ padding: 12, borderTop: "1px solid #1f2937" }}>
+               <input
+@@ -106,16 +106,47 @@ function MessageBubble({ role, text, meta }) {
+   );
+ }
+ 
+-function generateReply(userText, ctx) {
+-  const { mode, comfort, topic } = ctx;
+-  const tone = {
+-    "Not at all": { pre: "No worries—let’s go slow. ", post: " You’re doing fine; we’ll build it step by step." },
+-    "A bit": { pre: "Alright, let’s unpack that. ", post: " Tell me where it still feels fuzzy." },
+-    "Mostly": { pre: "", post: " Quick check: can you restate the key idea in one line?" },
+-    "I’ve got it": { pre: "", post: "" },
+-  }[comfort] || { pre: "", post: "" };
+-  const concise = `Focus on translating words to an equation, then do the same operation on both sides to isolate the variable.`;
+-  const check = `Try a quick example and tell me your first step.`;
+-  return { role: "assistant", text: `${tone.pre}${concise}\n\n${check}${tone.post}` };
+-}
++function generateReply(userText, ctx) {
++  const { mode, comfort, topic } = ctx;
++
++  const tone = {
++    "Not at all": { pre: "No worries—let’s go slow. ", post: " You’re doing fine; we’ll build it step by step." },
++    "A bit":      { pre: "Alright, let’s unpack that. ", post: " Tell me where it still feels fuzzy." },
++    "Mostly":     { pre: "", post: " Quick check: can you restate the key idea in one line?" },
++    "I’ve got it":{ pre: "", post: "" }
++  }[comfort] || { pre: "", post: "" };
++
++  const standard = () =>
++    `${tone.pre}In ${topic}, translate words into an equation and perform the same operation on both sides to isolate the variable.${tone.post}`;
++
++  const eli5 = () =>
++    `${tone.pre}Think of the equation like a see-saw: if you add 3 on one side, add 3 on the other so it stays level. Keep doing the opposite action until x is alone.${tone.post}`;
++
++  const steps = () => ({
++    text: `${tone.pre}Here’s a short plan for ${topic}.${tone.post}`,
++    meta: {
++      expand: [
++        "1) Write the equation clearly.",
++        "2) Identify the operation on x.",
++        "3) Apply the inverse operation to both sides.",
++        "4) Simplify and check."
++      ].join("\\n")
++    }
++  });
++
++  const socratic = () => ({
++    text: `${tone.pre}If the equation is 2x + 5 = 13, what's the very first thing you'd do to both sides?${tone.post}`
++  });
++
++  switch (mode) {
++    case "ELI5":     return { role: "assistant", text: eli5() };
++    case "Steps":    return { role: "assistant", ...steps() };
++    case "Socratic": return { role: "assistant", ...socratic() };
++    default:         return { role: "assistant", text: standard() };
++  }
++}
+

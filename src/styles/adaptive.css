@@ -4,3 +4,21 @@
 .progress{ height:3px; background:#233; border-radius:2px; }
 .progress>span{ display:block; height:100%; background:#ef4444; border-radius:2px; }
 .muted{ color: var(--muted); }
+
+/* Compact CTA used in dense toolbars (Tutor header) */
+.btn.compact { padding: 6px 10px; font-size: 13px; border-radius: 10px; }
+
+/* Keep rails visible while center content scrolls */
+.practice-grid .left,
+.practice-grid .right {
+  position: sticky;
+  top: 96px;      /* adjust if your top bar height differs */
+  align-self: start;
+}
+
+/* Taller chat card with internal scroll */
+.tutor-chat {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 60vh;   /* was ~46vh */
+}

@@ -28,19 +28,4 @@ export const MINI_LESSONS = {
       answer: 7
     }
   }
-  ,
-  "ALG.LE.Q2": {
-    title: "Two-step Linear Equations (120s)",
-    bullets: [
-      "Undo addition/subtraction first, then undo multiplication/division.",
-      "Keep both sides balanced at every step.",
-      "Check by substitution."
-    ],
-    diagram: "two-step.svg",
-    quickCheck: {
-      kind: "numeric",
-      stem: "Solve 2x + 3 = 11",
-      answer: 4
-    }
-  }
 };
