@@ -11,20 +11,18 @@ import AdminDashboard from "./pages/AdminDashboard.jsx";
 import ParentDigest from "./pages/ParentDigest.jsx";
 import DemoScript from "./components/DemoScript.jsx";
 
-/** Top-right "Demo data" switcher — now driven ONLY by global grade */
+/** Top-right "Demo data" switcher — driven by global grade */
 function DatasetSwitcher() {
   const { grade, setGrade } = useDemoData();
-
   const onChange = (e) => {
     const v = e.target.value;         // e.g., "g7"
     const gMatch = (v || "").match(/\d+/);
     if (gMatch && typeof setGrade === "function") setGrade(gMatch[0]);
   };
-
   return (
     <div className="row">
       <span className="badge">Demo data</span>
-      <select value={`g${grade || "7"}`} onChange={onChange}>
+      <select aria-label="Demo dataset grade" value={`g${grade || "7"}`} onChange={onChange}>
         <option value="g6">Grade 6</option>
         <option value="g7">Grade 7</option>
         <option value="g8">Grade 8</option>
@@ -43,13 +41,12 @@ function RoleSwitcher() {
     setVal(v);
     if (!v) return;
     nav(v);
-    // reset to placeholder after a tick
     setTimeout(() => setVal(""), 0);
   };
   return (
     <div className="row">
       <span className="badge">Role</span>
-      <select value={val} onChange={onChange}>
+      <select aria-label="Open as role" value={val} onChange={onChange}>
         <option value="">Open as…</option>
         <option value="/">Teacher – Assessment</option>
         <option value="/grading">Teacher – Grading</option>
@@ -72,7 +69,6 @@ export default function App() {
     const p = new URLSearchParams(loc.search);
     const ds = p.get("dataset"); // e.g., "g7"
     const route = p.get("route");
-
     if (ds) {
       const gMatch = ds.match(/\d+/);
       if (gMatch && typeof setGrade === "function") setGrade(gMatch[0]);
@@ -83,20 +79,34 @@ export default function App() {
 
   return (
     <div>
-      <nav className="nav">
+      <nav className="nav" role="navigation" aria-label="Global">
         <div className="inner">
           <div className="row">
             <strong>School of the Future PoC</strong>
             <span className="badge">Demo • Mock Data</span>
           </div>
-          <div className="links">
-            <NavLink to="/" end>Assessment</NavLink>
-            <NavLink to="/grading">Grading</NavLink>
-            <NavLink to="/practice">Practice</NavLink>
-            <NavLink to="/tutor">Tutor</NavLink>
-            <NavLink to="/admin">Admin</NavLink>
-            <NavLink to="/parent">Parent</NavLink>
+
+          <div className="links" role="tablist" aria-label="Primary pages">
+            {[
+              { to: "/", label: "Assessment", end: true },
+              { to: "/grading", label: "Grading" },
+              { to: "/practice", label: "Practice" },
+              { to: "/tutor", label: "Tutor" },
+              { to: "/admin", label: "Admin" },
+              { to: "/parent", label: "Parent" },
+            ].map(({ to, label, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) => "navlink" + (isActive ? " active" : "")}
+                aria-current={({ isActive }) => (isActive ? "page" : undefined)}
+              >
+                {label}
+              </NavLink>
+            ))}
           </div>
+
           <div className="row" style={{ gap: 12 }}>
             <DatasetSwitcher />
             <RoleSwitcher />
@@ -115,6 +125,30 @@ export default function App() {
           <Route path="/parent" element={<ParentDigest />} />
         </Routes>
       </div>
+
+      {/* Active-tab underline + small visual tweaks */}
+      <style>{`
+        .links .navlink {
+          position: relative;
+          padding-bottom: 6px;
+        }
+        .links .navlink.active::after {
+          content: "";
+          position: absolute;
+          left: 0; right: 0; bottom: -2px;
+          height: 2px;
+          background: #ef4444; /* red-500 */
+          border-radius: 2px;
+        }
+        @media (hover:hover) {
+          .links .navlink:not(.active):hover::after {
+            content: "";
+            position: absolute;
+            left: 20%; right: 20%; bottom: -2px;
+            height: 2px; background: #374151; border-radius:2px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
