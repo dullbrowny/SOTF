@@ -1,5 +1,5 @@
 import React from "react";
-import Sparkline from "./Sparkline";
+import Sparkline from "../Sparkline";
 
 const AdminParentPanel = ({ data }) => {
   return (
