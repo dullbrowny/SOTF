@@ -1,0 +1,31 @@
+# Node modules
+node_modules/
+
+# Vite build output
+dist/
+.vite/
+.vite-cache/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Mac system files
+.DS_Store
+
+# IDEs and editors
+.vscode/
+.idea/
+
+# OS or Editor swap files
+*.swp
+*.swo
+
+# dotenv files (optional)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
