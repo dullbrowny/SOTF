@@ -1,46 +1,45 @@
-// ✅ AIInsightsPanel.jsx
 import React from 'react';
 
-const AIInsightsPanel = ({ filters = {} }) => {
-  const {
-    grade = 'Grade 7',
-    class: className = 'A',
-    student = 'Kabir'
-  } = filters;
+const AIInsightsPanel = ({ grade, classSection, student }) => {
+  const actions = {
+    Kabir: [
+      'Needs improvement in Science.',
+      'Recommend Mock Test for Science.',
+      'Schedule additional Math class.',
+      'Send letter to parents regarding late submissions.',
+    ],
+    Aarav: [
+      'Excellent performance.',
+      'Encourage participation in Math Olympiad.',
+    ],
+    Anaya: [
+      'High scores across subjects.',
+      'Recommend mentoring peers.',
+    ],
+  };
 
-  const mockInsights = [
-    {
-      title: 'Math Mastery Alert',
-      insight: `${student} has shown strong improvement in Algebra but struggles with Geometry. Focus on spatial reasoning exercises.`
-    },
-    {
-      title: 'Reading Comprehension Drop',
-      insight: `${student}'s recent assessments show a drop in inference skills. Suggest reading narrative texts with guiding questions.`
-    },
-    {
-      title: 'Science Curiosity Spike',
-      insight: `${student} has shown increased interest in experiments. Encourage hands-on activities related to current curriculum.`
-    }
-  ];
+  const insights = actions[student] || ['Select a grade/class/student to view insights.'];
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg shadow">
-      <h2 className="text-lg font-semibold text-white mb-4">AI-Generated Insights</h2>
-
-      <div className="text-gray-300 mb-4">
-        <p>Grade: {grade}</p>
-        <p>Class: {className}</p>
-        <p>Student: {student}</p>
-      </div>
-
-      <ul className="space-y-4">
-        {mockInsights.map((insight, idx) => (
-          <li key={idx} className="bg-gray-700 p-3 rounded text-gray-200">
-            <h3 className="font-semibold text-white">{insight.title}</h3>
-            <p className="text-sm">{insight.insight}</p>
-          </li>
+    <div>
+      <h3>AI-Generated Insights</h3>
+      <ul style={{ paddingLeft: '1rem' }}>
+        {insights.map((item, idx) => (
+          <li key={idx} style={{ marginBottom: '0.5rem' }}>{item}</li>
         ))}
       </ul>
+
+      <div>
+        {insights.some(text => text.toLowerCase().includes('mock')) && (
+          <button onClick={() => alert('Mock test scheduled')}>📘 Schedule Mock Test</button>
+        )}
+        {insights.some(text => text.toLowerCase().includes('class')) && (
+          <button onClick={() => alert('Extra class scheduled')}>📗 Schedule Extra Class</button>
+        )}
+        {insights.some(text => text.toLowerCase().includes('letter')) && (
+          <button onClick={() => alert('Letter sent to parents')}>📨 Send Letter</button>
+        )}
+      </div>
     </div>
   );
 };

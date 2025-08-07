@@ -1,0 +1,77 @@
+import React, { useState } from "react";
+import FiltersPanel from "./FiltersPanel";
+import AdminStudentPanel from "./AdminStudentPanel";
+import AdminParentPanel from "./AdminParentPanel";
+import AdminTeacherPanel from "./AdminTeacherPanel";
+import ChartsPanel from "./ChartsPanel";           // NEW
+import AIInsightsPanel from "./AIInsightsPanel";   // NEW
+
+const TABS = ["Student", "Parent", "Teacher"];
+
+const AdminPanelMain = ({ data }) => {
+  const [activeTab, setActiveTab] = useState("Student");
+  const [filters, setFilters] = useState({
+    grade: "Grade 8",
+    class: "A",
+    subject: "Math",
+    student: "All",
+  });
+
+  const handleFilterChange = (updatedFilters) => {
+    setFilters((prev) => ({ ...prev, ...updatedFilters }));
+  };
+
+  const renderActivePanel = () => {
+    switch (activeTab) {
+      case "Student":
+        return <AdminStudentPanel data={data.Student} filters={filters} />;
+      case "Parent":
+        return <AdminParentPanel data={data.Parent} filters={filters} />;
+      case "Teacher":
+        return <AdminTeacherPanel data={data.Teacher} filters={filters} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex space-x-6">
+      {/* LEFT FILTER PANEL */}
+      <div className="w-1/4">
+        <FiltersPanel filters={filters} onChange={handleFilterChange} />
+      </div>
+
+      {/* RIGHT DASHBOARD PANEL */}
+      <div className="w-3/4 space-y-6">
+        {/* Tabs */}
+        <div className="flex space-x-4 border-b pb-2">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-t-md font-semibold ${
+                activeTab === tab
+                  ? "border-b-2 border-blue-500 text-blue-700"
+                  : "text-gray-500 hover:text-blue-500"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Active Panel */}
+        <div>{renderActivePanel()}</div>
+
+        {/* Real Chart Component */}
+        <ChartsPanel data={data[activeTab]} filters={filters} />
+
+        {/* AI Insight Component */}
+        <AIInsightsPanel data={data[activeTab]} filters={filters} />
+      </div>
+    </div>
+  );
+};
+
+export default AdminPanelMain;
+

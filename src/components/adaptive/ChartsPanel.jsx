@@ -1,41 +1,109 @@
-// ✅ ChartsPanel.jsx
 import React from 'react';
+import { Line, Bar, Radar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  LineElement,
+  BarElement,
+  RadarController,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  RadialLinearScale,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 
-const ChartsPanel = ({ filters = {} }) => {
-  const {
-    grade = 'Grade 7',
-    class: className = 'A',
-    student = 'Kabir'
-  } = filters;
+ChartJS.register(
+  LineElement,
+  BarElement,
+  RadarController,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  RadialLinearScale,
+  Title,
+  Tooltip,
+  Legend
+);
 
-  const mockPerformanceData = {
-    Math: [80, 85, 90, 95],
-    Science: [70, 75, 85, 90],
-    English: [88, 82, 85, 91]
+const getMockData = (student) => {
+  const studentScores = {
+    Kabir: [75, 68, 80, 85, 78],
+    Aarav: [85, 82, 79, 91, 89],
+    Anaya: [92, 90, 94, 89, 93],
   };
 
+  const subjectScores = {
+    Kabir: [78, 67, 85, 64],
+    Aarav: [90, 85, 88, 84],
+    Anaya: [94, 92, 95, 91],
+  };
+
+  const radarScores = {
+    Kabir: [4, 3, 4, 2, 3],
+    Aarav: [5, 5, 4, 4, 5],
+    Anaya: [5, 4, 5, 5, 4],
+  };
+
+  return {
+    line: studentScores[student] || [70, 72, 74, 76, 78],
+    bar: subjectScores[student] || [80, 75, 85, 70],
+    radar: radarScores[student] || [3, 3, 3, 3, 3],
+  };
+};
+
+const ChartsPanel = ({ grade, classSection, student }) => {
+  const mock = getMockData(student);
+
   return (
-    <div className="bg-gray-800 p-4 rounded-lg shadow mb-4">
-      <h2 className="text-lg font-semibold text-white mb-4">Performance Chart</h2>
+    <div>
+      <h3>Performance Overview</h3>
+      <Line
+        data={{
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+          datasets: [
+            {
+              label: 'Score',
+              data: mock.line,
+              fill: false,
+              borderColor: '#8884d8',
+              tension: 0.3,
+            },
+          ],
+        }}
+        height={150}
+      />
 
-      <div className="text-gray-300 mb-4">
-        <p>Grade: {grade}</p>
-        <p>Class: {className}</p>
-        <p>Student: {student}</p>
-      </div>
+      <Bar
+        data={{
+          labels: ['Math', 'Science', 'English', 'History'],
+          datasets: [
+            {
+              label: 'Scores',
+              data: mock.bar,
+              backgroundColor: '#82ca9d',
+            },
+          ],
+        }}
+        height={150}
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {Object.entries(mockPerformanceData).map(([subject, scores]) => (
-          <div key={subject} className="bg-gray-700 p-3 rounded">
-            <h3 className="text-white font-medium mb-2">{subject}</h3>
-            <ul className="text-gray-300 text-sm">
-              {scores.map((score, idx) => (
-                <li key={idx}>Test {idx + 1}: {score}%</li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
+      <Radar
+        data={{
+          labels: ['Participation', 'Homework', 'Test', 'Project', 'Engagement'],
+          datasets: [
+            {
+              label: 'Skill Radar',
+              data: mock.radar,
+              backgroundColor: 'rgba(135, 206, 235, 0.5)',
+              borderColor: '#00bfff',
+              pointBackgroundColor: '#00bfff',
+            },
+          ],
+        }}
+        height={200}
+      />
     </div>
   );
 };

@@ -1,3 +1,4 @@
+// AdminPanelMain.jsx
 import React, { useState } from 'react';
 import FiltersPanel from './FiltersPanel';
 import ChartsPanel from './ChartsPanel';
@@ -21,10 +22,10 @@ const AdminPanelMain = () => {
         />
       </div>
       <div style={{ flex: 2 }}>
-        <ChartsPanel grade={grade} classSection={classSection} student={student} />
+        <ChartsPanel student={student} />
       </div>
       <div style={{ flex: 1 }}>
-        <AIInsightsPanel grade={grade} classSection={classSection} student={student} />
+        <AIInsightsPanel student={student} />
       </div>
     </div>
   );
