@@ -1,8 +1,8 @@
 import React from 'react';
-import ParentDashboardPanel from '../components/adaptive/ParentDashboardPanel';
+import ParentPanelMain from '../components/adaptive/ParentPanelMain';
 
 const ParentDigest = () => {
-  return <ParentDashboardPanel />;
+  return <ParentPanelMain />;
 };
 
 export default ParentDigest;
